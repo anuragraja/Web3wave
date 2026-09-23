@@ -1,0 +1,24 @@
+import AuthService from "../services/auth.service.js";
+import { AppError } from "../utils/appError.js";
+
+const authService = new AuthService();
+
+export const authorize = (role) => {
+    return async (req, res, next) => {
+        try {
+            const hasPermission = await authService.hasPermission(
+                req.userId, 
+                role
+            );
+            console.log("haspermission", hasPermission);
+            if (!hasPermission) {
+                throw new AppError("Access denied. Insufficient permissions.", 403);
+            }
+            next();
+        } catch (error) {
+            next(error);
+        }
+    };
+};
+
+export default authorize;
