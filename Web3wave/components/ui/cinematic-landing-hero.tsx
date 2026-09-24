@@ -223,8 +223,22 @@ export function CinematicHero({
   const mockupRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>(0);
 
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const updateMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    updateMobile();
+    window.addEventListener("resize", updateMobile);
+    return () => window.removeEventListener("resize", updateMobile);
+  }, []);
+
   // 1. High-Performance Mouse Interaction Logic (Using requestAnimationFrame)
   useEffect(() => {
+    // Disable mouse parallax on mobile devices to save processing power
+    if (window.innerWidth < 768) return;
+
     const handleMouseMove = (e: MouseEvent) => {
       // Skip entirely when scrolled past hero (saves CPU during scroll)
       if (window.scrollY > window.innerHeight) return;
@@ -259,11 +273,14 @@ export function CinematicHero({
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(requestRef.current);
     };
-  },[]);
+  }, []);
 
   // 2. Complex Cinematic Scroll Timeline
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
+    const isMobileDevice = window.innerWidth < 768;
+
+    // Prevent mobile address bar show/hide from triggering full ScrollTrigger layout recalculation jumps
+    ScrollTrigger.config({ ignoreMobileResize: true });
 
     const ctx = gsap.context(() => {
       gsap.set(".text-track", { autoAlpha: 0, y: 60, scale: 0.85, filter: "none", rotationX: -20 });
@@ -282,11 +299,12 @@ export function CinematicHero({
         scrollTrigger: {
           trigger: containerRef.current,
           start: "top top",
-          end: "+=2800",
+          end: isMobileDevice ? "+=1800" : "+=2800",
           pin: true,
-          scrub: 0.8,
-          anticipatePin: 1,
-          fastScrollEnd: true,
+          scrub: isMobileDevice ? 0.15 : 0.8,
+          anticipatePin: isMobileDevice ? 0 : 1,
+          fastScrollEnd: !isMobileDevice,
+          invalidateOnRefresh: true,
         },
       });
 
@@ -312,9 +330,9 @@ export function CinematicHero({
         .to(".card-idle-overlay", { opacity: 0.8, duration: 0.6 })
         .to(".cta-wrapper", { autoAlpha: 1, scale: 1, filter: "none", ease: "power2.out", duration: 1.2 }, "-=0.5")
         .to(".main-card", {
-          width: isMobile ? "92vw" : "85vw",
-          height: isMobile ? "92vh" : "85vh",
-          borderRadius: isMobile ? "32px" : "40px",
+          width: isMobileDevice ? "92vw" : "85vw",
+          height: isMobileDevice ? "92vh" : "85vh",
+          borderRadius: isMobileDevice ? "32px" : "40px",
           y: -window.innerHeight * 0.9,
           autoAlpha: 0,
           ease: "power2.inOut",
@@ -323,13 +341,21 @@ export function CinematicHero({
 
     }, containerRef);
 
-    return () => ctx.revert();
-  },[metricValue]); 
+    const handleOrientationChange = () => {
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener("orientationchange", handleOrientationChange);
+
+    return () => {
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      ctx.revert();
+    };
+  }, [metricValue]); 
 
   return (
     <div
       ref={containerRef}
-      className={cn("relative w-screen h-screen overflow-hidden flex items-center justify-center bg-background text-foreground font-sans antialiased", className)}
+      className={cn("relative w-screen h-screen min-h-[100dvh] overflow-hidden flex items-center justify-center bg-background text-foreground font-sans antialiased", className)}
       style={{ perspective: "1500px", contain: "layout style paint" }}
       {...props}
     >
@@ -340,7 +366,7 @@ export function CinematicHero({
 
       {/* FLUID PARTICLES ANIMATION BACKGROUND */}
       <div className="absolute inset-0 z-0 pointer-events-none opacity-70">
-        <FluidParticlesBackground particleCount={500} noiseIntensity={0.003} />
+        <FluidParticlesBackground particleCount={isMobile ? 120 : 500} noiseIntensity={0.003} />
       </div>
 
       {/* BACKGROUND LAYER: Hero Texts */}

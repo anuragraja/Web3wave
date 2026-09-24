@@ -14,7 +14,9 @@ export function SmoothScroll({ children }: { children?: React.ReactNode }) {
   const lenisRef = useRef<Lenis | null>(null)
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll with luxurious inertia
+    // Initialize Lenis smooth scroll with luxurious inertia for desktop wheel
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+
     const lenis = new Lenis({
       duration: 1.5,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -22,7 +24,8 @@ export function SmoothScroll({ children }: { children?: React.ReactNode }) {
       gestureOrientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 0.9,
-      touchMultiplier: 1.8,
+      touchMultiplier: 1,
+      syncTouch: false,
     })
 
     lenisRef.current = lenis
@@ -37,6 +40,13 @@ export function SmoothScroll({ children }: { children?: React.ReactNode }) {
 
     gsap.ticker.add(updateTicker)
     gsap.ticker.lagSmoothing(0)
+
+    // Handle orientation changes smoothly on mobile
+    const handleOrientation = () => {
+      ScrollTrigger.refresh()
+      lenis.resize()
+    }
+    window.addEventListener('orientationchange', handleOrientation)
 
     // Smooth scroll handling for all hash links (#events, #join, etc.)
     const handleAnchorClick = (e: MouseEvent) => {
@@ -60,6 +70,7 @@ export function SmoothScroll({ children }: { children?: React.ReactNode }) {
 
     return () => {
       document.removeEventListener('click', handleAnchorClick)
+      window.removeEventListener('orientationchange', handleOrientation)
       gsap.ticker.remove(updateTicker)
       lenis.destroy()
       if (typeof window !== 'undefined') {

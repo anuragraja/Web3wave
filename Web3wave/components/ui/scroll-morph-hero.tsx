@@ -12,6 +12,7 @@ interface FlipCardProps {
     total: number;
     phase: AnimationPhase;
     target: { x: number; y: number; rotation: number; scale: number; opacity: number };
+    isMobile?: boolean;
 }
 
 // --- FlipCard Component ---
@@ -22,7 +23,11 @@ function FlipCard({
     src,
     index,
     target,
+    phase,
+    isMobile,
 }: FlipCardProps) {
+    const isScrollingPhase = phase === "circle" || phase === "bottom-strip";
+
     return (
         <motion.div
             // Smoothly animate to the coordinates defined by the parent
@@ -33,11 +38,15 @@ function FlipCard({
                 scale: target.scale,
                 opacity: target.opacity,
             }}
-            transition={{
-                type: "spring",
-                stiffness: 50,
-                damping: 18,
-            }}
+            transition={
+                isMobile && isScrollingPhase
+                    ? { duration: 0 } // On mobile during scroll: direct 1:1 synchronization without spring lag
+                    : {
+                        type: "spring",
+                        stiffness: 50,
+                        damping: 18,
+                    }
+            }
 
             // Initial style
             style={{
@@ -122,8 +131,20 @@ const lerp = (start: number, end: number, t: number) => start * (1 - t) + end * 
 export default function ScrollMorphHero() {
     const [introPhase, setIntroPhase] = useState<AnimationPhase>("scatter");
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [isMobile, setIsMobile] = useState(false);
     const sectionRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
+    const prevWidthRef = useRef<number>(0);
+
+    // Track mobile view cleanly
+    useEffect(() => {
+        const updateMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        updateMobile();
+        window.addEventListener("resize", updateMobile);
+        return () => window.removeEventListener("resize", updateMobile);
+    }, []);
 
     // Track scroll position natively relative to parent container
     const { scrollYProgress } = useScroll({
@@ -137,9 +158,21 @@ export default function ScrollMorphHero() {
 
         const handleResize = (entries: ResizeObserverEntry[]) => {
             for (const entry of entries) {
+                const newWidth = entry.contentRect.width;
+                const newHeight = entry.contentRect.height;
+                const isMobileView = newWidth < 768;
+
+                // On mobile, ignore small height shifts from mobile address bar expanding/collapsing
+                if (isMobileView && prevWidthRef.current === newWidth) {
+                    const heightDiff = Math.abs(containerSize.height - newHeight);
+                    if (heightDiff < 150) {
+                        return;
+                    }
+                }
+                prevWidthRef.current = newWidth;
                 setContainerSize({
-                    width: entry.contentRect.width,
-                    height: entry.contentRect.height,
+                    width: newWidth,
+                    height: newHeight,
                 });
             }
         };
@@ -147,13 +180,16 @@ export default function ScrollMorphHero() {
         const observer = new ResizeObserver(handleResize);
         observer.observe(viewportRef.current);
 
+        const initialWidth = viewportRef.current.offsetWidth;
+        const initialHeight = viewportRef.current.offsetHeight;
+        prevWidthRef.current = initialWidth;
         setContainerSize({
-            width: viewportRef.current.offsetWidth,
-            height: viewportRef.current.offsetHeight,
+            width: initialWidth,
+            height: initialHeight,
         });
 
         return () => observer.disconnect();
-    }, []);
+    }, [containerSize.height]);
 
     // 1. Morph Progress: 0 (Circle) -> 1 (Bottom Arc)
     // Happens between scroll 0 and 0.25
@@ -165,11 +201,12 @@ export default function ScrollMorphHero() {
     const scrollRotate = useTransform(scrollYProgress, [0.25, 1], [0, 360]);
     const smoothScrollRotate = useSpring(scrollRotate, { stiffness: 60, damping: 22 });
 
-    // --- Mouse Parallax ---
+    // --- Mouse Parallax (Desktop Only) ---
     const mouseX = useMotionValue(0);
     const smoothMouseX = useSpring(mouseX, { stiffness: 40, damping: 25 });
 
     useEffect(() => {
+        if (isMobile) return;
         const viewport = viewportRef.current;
         if (!viewport) return;
 
@@ -181,7 +218,7 @@ export default function ScrollMorphHero() {
         };
         viewport.addEventListener("mousemove", handleMouseMove);
         return () => viewport.removeEventListener("mousemove", handleMouseMove);
-    }, [mouseX]);
+    }, [isMobile, mouseX]);
 
     // --- Intro Sequence ---
     useEffect(() => {
@@ -206,27 +243,70 @@ export default function ScrollMorphHero() {
     const [rotateValue, setRotateValue] = useState(0);
     const [parallaxValue, setParallaxValue] = useState(0);
 
+    // On mobile: synchronize directly with scroll without sluggish spring lag
+    // On desktop: use smooth springs (stiffness 60, damping 22) exactly as originally designed
     useEffect(() => {
-        const unsubscribeMorph = smoothMorph.on("change", setMorphValue);
-        const unsubscribeRotate = smoothScrollRotate.on("change", setRotateValue);
-        const unsubscribeParallax = smoothMouseX.on("change", setParallaxValue);
+        const morphSource = isMobile ? morphProgress : smoothMorph;
+        const rotateSource = isMobile ? scrollRotate : smoothScrollRotate;
+
+        let rafId: number | null = null;
+        let pendingMorph = morphSource.get();
+        let pendingRotate = rotateSource.get();
+        let pendingParallax = smoothMouseX.get();
+
+        const flushUpdates = () => {
+            setMorphValue(pendingMorph);
+            setRotateValue(pendingRotate);
+            if (!isMobile) {
+                setParallaxValue(pendingParallax);
+            }
+            rafId = null;
+        };
+
+        const scheduleUpdate = () => {
+            if (rafId === null) {
+                rafId = requestAnimationFrame(flushUpdates);
+            }
+        };
+
+        const unsubscribeMorph = morphSource.on("change", (val) => {
+            pendingMorph = val;
+            scheduleUpdate();
+        });
+
+        const unsubscribeRotate = rotateSource.on("change", (val) => {
+            pendingRotate = val;
+            scheduleUpdate();
+        });
+
+        const unsubscribeParallax = smoothMouseX.on("change", (val) => {
+            if (!isMobile) {
+                pendingParallax = val;
+                scheduleUpdate();
+            }
+        });
+
         return () => {
             unsubscribeMorph();
             unsubscribeRotate();
             unsubscribeParallax();
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
         };
-    }, [smoothMorph, smoothScrollRotate, smoothMouseX]);
+    }, [isMobile, morphProgress, scrollRotate, smoothMorph, smoothScrollRotate, smoothMouseX]);
 
     // --- Content Opacity & Fade ---
-    const contentOpacity = useTransform(smoothMorph, [0.6, 1], [0, 1]);
-    const contentY = useTransform(smoothMorph, [0.6, 1], [25, 0]);
+    const activeMorph = isMobile ? morphProgress : smoothMorph;
+    const contentOpacity = useTransform(activeMorph, [0.6, 1], [0, 1]);
+    const contentY = useTransform(activeMorph, [0.6, 1], [25, 0]);
 
     return (
         <div ref={sectionRef} className="relative w-full h-[350vh] bg-[#0a0a0d]">
             {/* Sticky Screen Viewport */}
             <div
                 ref={viewportRef}
-                className="sticky top-0 w-full h-screen overflow-hidden text-white flex flex-col items-center justify-center select-none"
+                className="sticky top-0 w-full h-screen min-h-[100dvh] overflow-hidden text-white flex flex-col items-center justify-center select-none"
             >
                 {/* Ambient Radial Glow */}
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(244,63,94,0.18)_0%,transparent_70%)] pointer-events-none" />
@@ -333,6 +413,7 @@ export default function ScrollMorphHero() {
                                     total={TOTAL_IMAGES}
                                     phase={introPhase}
                                     target={target}
+                                    isMobile={isMobile}
                                 />
                             );
                         })}
