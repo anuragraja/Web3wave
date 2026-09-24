@@ -5,10 +5,12 @@ import { CinematicHero } from '@/components/ui/cinematic-landing-hero'
 import { LumaNav } from '@/components/LumaNav'
 import { LumaHero } from '@/components/LumaHero'
 import { LumaEventGrid, LumaEvent, sampleEvents } from '@/components/LumaEventGrid'
-import { LumaEventModal } from '@/components/LumaEventModal'
-import { LumaCreateEventModal } from '@/components/LumaCreateEventModal'
-import { LumaSubscribeModal } from '@/components/LumaSubscribeModal'
-import { LumaAuthModal } from '@/components/LumaAuthModal'
+import dynamic from 'next/dynamic'
+
+const LumaEventModal = dynamic(() => import('@/components/LumaEventModal').then(mod => mod.LumaEventModal))
+const LumaCreateEventModal = dynamic(() => import('@/components/LumaCreateEventModal').then(mod => mod.LumaCreateEventModal))
+const LumaSubscribeModal = dynamic(() => import('@/components/LumaSubscribeModal').then(mod => mod.LumaSubscribeModal))
+const LumaAuthModal = dynamic(() => import('@/components/LumaAuthModal').then(mod => mod.LumaAuthModal))
 import { LumaHostGuilds } from '@/components/LumaHostGuilds'
 import { ProjectShowcase } from '@/components/ProjectShowcase'
 import { BuilderPassGenerator } from '@/components/BuilderPassGenerator'

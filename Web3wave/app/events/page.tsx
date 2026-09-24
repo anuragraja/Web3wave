@@ -21,18 +21,20 @@ import {
 } from 'lucide-react'
 
 import { LumaNav } from '@/components/LumaNav'
-import { LumaEventGrid, LumaEvent, sampleEvents } from '@/components/LumaEventGrid'
-import { LumaEventModal } from '@/components/LumaEventModal'
-import { LumaCreateEventModal } from '@/components/LumaCreateEventModal'
-import { LumaSubscribeModal } from '@/components/LumaSubscribeModal'
-import { LumaAuthModal } from '@/components/LumaAuthModal'
+import { LumaEvent, sampleEvents } from '@/components/LumaEventGrid'
+import dynamic from 'next/dynamic'
+
+const LumaEventModal = dynamic(() => import('@/components/LumaEventModal').then(mod => mod.LumaEventModal))
+const LumaCreateEventModal = dynamic(() => import('@/components/LumaCreateEventModal').then(mod => mod.LumaCreateEventModal))
+const LumaSubscribeModal = dynamic(() => import('@/components/LumaSubscribeModal').then(mod => mod.LumaSubscribeModal))
+const LumaAuthModal = dynamic(() => import('@/components/LumaAuthModal').then(mod => mod.LumaAuthModal))
+const HackathonRegisterModal = dynamic(() => import('@/components/events/HackathonRegisterModal').then(mod => mod.HackathonRegisterModal))
 import HoverFooter from '@/components/ui/hover-footer'
 
 import { HackathonsSection, sampleHackathons, HackathonItem } from '@/components/events/HackathonsSection'
 import { WorkshopsSection, sampleWorkshops, Workshop } from '@/components/events/WorkshopsSection'
-import { HackathonRegisterModal } from '@/components/events/HackathonRegisterModal'
 
-type ActivePillarTab = 'all' | 'hackathons' | 'workshops'
+type ActivePillarTab = 'all' | 'workshops'
 
 export default function EventsPage() {
   const [activeTab, setActiveTab] = useState<ActivePillarTab>('all')
@@ -83,26 +85,26 @@ export default function EventsPage() {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-white leading-tight">
-              Hackathons & Technical Workshops
+              Events & Technical Workshops
             </h1>
 
             <p className="text-sm md:text-base text-zinc-300 leading-relaxed">
-              Your gateway to shipping onchain dApps. Compete in high-stakes hackathons, attend hands-on developer masterclasses, and master smart contract engineering.
+              Your gateway to shipping onchain dApps. Attend hands-on developer masterclasses, network with ecosystem builders, and master modern creative web development.
             </p>
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-white/10">
               <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <span className="block text-2xl font-black text-amber-400 font-mono">$25,000+</span>
-                <span className="text-[11px] text-zinc-400 font-medium">Bounties & Grants</span>
+                <span className="block text-2xl font-black text-rose-400 font-mono">1 Day</span>
+                <span className="text-[11px] text-zinc-400 font-medium">Hands-On Workshop</span>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <span className="block text-2xl font-black text-rose-400 font-mono">15+</span>
-                <span className="text-[11px] text-zinc-400 font-medium">Hands-On Workshops</span>
+                <span className="block text-2xl font-black text-amber-400 font-mono">₹10K+</span>
+                <span className="text-[11px] text-zinc-400 font-medium">Swags & Goodies</span>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <span className="block text-2xl font-black text-cyan-400 font-mono">500+</span>
-                <span className="text-[11px] text-zinc-400 font-medium">Active Builders</span>
+                <span className="block text-2xl font-black text-cyan-400 font-mono">50+</span>
+                <span className="text-[11px] text-zinc-400 font-medium">Connected Builders</span>
               </div>
             </div>
           </div>
@@ -113,8 +115,7 @@ export default function EventsPage() {
           {/* Main Pillar Tabs */}
           <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/5 border border-white/10 w-full md:w-auto overflow-x-auto scrollbar-none">
             {[
-              { id: 'all', label: 'All Hub', icon: Calendar, color: 'text-zinc-300' },
-              { id: 'hackathons', label: 'Hackathons', icon: Trophy, color: 'text-cyan-400' },
+              { id: 'all', label: 'All Events', icon: Calendar, color: 'text-zinc-300' },
               { id: 'workshops', label: 'Workshops', icon: Terminal, color: 'text-rose-400' }
             ].map((tab) => {
               const Icon = tab.icon
@@ -156,63 +157,20 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Dynamic Render Based on Active Pillar Tab */}
+        {/* Dynamic Render: Displays Only the Real Workshop */}
         <div className="space-y-16">
-          {/* Pillar 1: Hackathons */}
-          {(activeTab === 'all' || activeTab === 'hackathons') && (
-            <section id="hackathons-pillar" className="space-y-6">
-              {activeTab === 'all' && (
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                  <h2 className="text-2xl font-black text-white flex items-center gap-2">
-                    <Trophy className="w-6 h-6 text-cyan-400" />
-                    Web3 Hackathons & Protocol Grants
-                  </h2>
-                  <button
-                    onClick={() => setActiveTab('hackathons')}
-                    className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                  >
-                    View All Hackathons →
-                  </button>
-                </div>
-              )}
-
-              <HackathonsSection
-                onRegisterHackathon={(hackathon) => setSelectedHackathon(hackathon)}
-              />
-            </section>
-          )}
-
-          {/* Pillar 2: Workshops & Masterclasses */}
-          {(activeTab === 'all' || activeTab === 'workshops') && (
-            <section id="workshops-pillar" className="space-y-6">
-              {activeTab === 'all' && (
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                  <h2 className="text-2xl font-black text-white flex items-center gap-2">
-                    <Terminal className="w-6 h-6 text-rose-400" />
-                    Hands-on Workshops & Code Sprints
-                  </h2>
-                  <button
-                    onClick={() => setActiveTab('workshops')}
-                    className="text-xs font-bold text-rose-400 hover:text-rose-300 flex items-center gap-1"
-                  >
-                    View All Workshops →
-                  </button>
-                </div>
-              )}
-
-              <WorkshopsSection
-                onReserveWorkshop={(ws) => {
-                  const matched = events.find(e => e.title.toLowerCase().includes(ws.title.toLowerCase().substring(0, 10)))
-                  if (matched) {
-                    setSelectedEvent(matched)
-                  } else {
-                    setSelectedEvent(sampleEvents[1])
-                  }
-                }}
-              />
-            </section>
-          )}
-
+          <section id="workshops-pillar" className="space-y-6">
+            <WorkshopsSection
+              onReserveWorkshop={(ws) => {
+                const matched = events.find(e => e.title.toLowerCase().includes(ws.title.toLowerCase().substring(0, 10)))
+                if (matched) {
+                  setSelectedEvent(matched)
+                } else {
+                  setSelectedEvent(sampleEvents[0])
+                }
+              }}
+            />
+          </section>
         </div>
       </main>
 

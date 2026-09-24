@@ -15,12 +15,21 @@ interface Particle {
 
 export function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const isVisibleRef = useRef(true)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        isVisibleRef.current = entries[0]?.isIntersecting ?? true
+      },
+      { threshold: 0 }
+    )
+    observer.observe(canvas)
 
     let animationFrameId: number
     let width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth)
@@ -70,6 +79,11 @@ export function ParticleCanvas() {
     canvas.addEventListener('mouseleave', handleMouseLeave)
 
     const render = () => {
+      if (!isVisibleRef.current) {
+        animationFrameId = requestAnimationFrame(render)
+        return
+      }
+
       ctx.clearRect(0, 0, width, height)
 
       // Draw particle connections
@@ -135,6 +149,7 @@ export function ParticleCanvas() {
       window.removeEventListener('resize', handleResize)
       canvas.removeEventListener('mousemove', handleMouseMove)
       canvas.removeEventListener('mouseleave', handleMouseLeave)
+      observer.disconnect()
     }
   }, [])
 

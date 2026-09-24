@@ -12,7 +12,7 @@ interface LumaHeroProps {
   onSelectCategory: (cat: string) => void
 }
 
-const categories = ['All Events', 'Meetups', 'Workshops', 'Hackathons', 'Past Highlights']
+const categories = ['All Events', 'Workshops']
 
 const pillars = [
   {

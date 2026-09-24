@@ -39,7 +39,7 @@ export function SmoothScroll({ children }: { children?: React.ReactNode }) {
     }
 
     gsap.ticker.add(updateTicker)
-    gsap.ticker.lagSmoothing(0)
+    gsap.ticker.lagSmoothing(500, 33)
 
     // Handle orientation changes smoothly on mobile
     const handleOrientation = () => {

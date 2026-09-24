@@ -47,20 +47,20 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
             <X className="w-5 h-5" />
           </button>
 
-          {/* Banner Cover Image */}
-          <div className="relative h-56 w-full overflow-hidden bg-zinc-900">
+          {/* Banner Cover Image / Workshop Poster */}
+          <div className="relative w-full overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
             <img
               src={event.coverImage}
-              alt={event.title}
-              className="w-full h-full object-cover"
+              alt="Blockchain & Creative Web Development Workshop"
+              className="w-full h-auto max-h-[360px] sm:max-h-[420px] object-contain"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#141418] via-[#141418]/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#141418] via-transparent to-transparent opacity-60 pointer-events-none" />
 
             <div className="absolute bottom-4 left-6 flex items-center gap-2">
-              <span className="text-xs font-bold text-rose-400 bg-rose-500/10 backdrop-blur-md px-3 py-1 rounded-full border border-rose-500/20">
-                {event.category}
+              <span className="text-xs font-bold text-rose-300 bg-rose-500/80 backdrop-blur-md px-3 py-1 rounded-full border border-rose-300/30 shadow-md">
+                {event.eventType || event.category}
               </span>
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-500/20">
+              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/20 backdrop-blur-md px-3 py-1 rounded-full border border-emerald-500/30">
                 {event.price}
               </span>
             </div>
@@ -76,7 +76,7 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
               <img
                 src={event.hostAvatar}
                 alt={event.hostName}
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-white/20"
+                className="w-9 h-9 rounded-full object-contain bg-[#181820] p-1 ring-2 ring-white/20"
               />
               <div>
                 <div className="text-xs text-zinc-400">Hosted by</div>
@@ -90,44 +90,67 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
                 <Calendar className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <div className="text-zinc-500 text-[10px] font-mono">DATE & TIME</div>
-                  <div>{event.dateString}</div>
-                  <div className="text-zinc-400">{event.timeString}</div>
+                  <div className="text-white font-bold">{event.dateString}</div>
+                  <div className="text-rose-400 font-mono">{event.timeString}</div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-zinc-500 text-[10px] font-mono">LOCATION</div>
-                  <div className="text-white font-semibold">{event.venue}</div>
+              <div className="flex items-start gap-3.5">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-cyan-400 text-[10px] font-mono font-bold tracking-wider uppercase">VENUE & LOCATION</div>
+                  <div className="text-white font-black text-sm sm:text-base mt-0.5">{event.venue}</div>
+                  <div className="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed mt-0.5">
+                    {event.location || 'Transport Nagar, Near Bansal College, Bhopal'}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Description & Agenda */}
-            <div className="space-y-4 mb-8">
+            {/* Description */}
+            <div className="space-y-4 mb-6">
               <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
-                ABOUT THIS EVENT
+                ABOUT THIS WORKSHOP
               </h3>
               <p className="text-sm text-zinc-300 leading-relaxed">
                 {event.description}
               </p>
-
-              {event.agenda.length > 0 && (
-                <div className="pt-4">
-                  <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider mb-3">
-                    SCHEDULE AGENDAS
-                  </h3>
-                  <div className="space-y-2 font-mono text-xs">
-                    {event.agenda.map((ag, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-zinc-300">
-                        {ag}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Workshop Highlights */}
+            {event.highlights && event.highlights.length > 0 && (
+              <div className="space-y-3 mb-6">
+                <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                  WORKSHOP HIGHLIGHTS
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {event.highlights.map((h, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-zinc-300 flex items-start gap-2">
+                      <span className="text-sm">{h.slice(0, 2)}</span>
+                      <span>{h.slice(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Schedule Agendas */}
+            {event.agenda.length > 0 && (
+              <div className="space-y-3 mb-8">
+                <h3 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                  SCHEDULE AGENDAS
+                </h3>
+                <div className="space-y-2 font-mono text-xs">
+                  {event.agenda.map((ag, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-zinc-300">
+                      {ag}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Registration State or Issued Pass */}
             {ticketIssued ? (

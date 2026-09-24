@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description: "The epicenter of Web3, AI & open-source software development. A vibrant ecosystem for developers, founders, creators, and curious builders.",
   keywords: ["Web3Wave", "Web3 Community", "Developers", "Blockchain", "MANIT Web3", "MP Startups", "India Web3"],
   authors: [{ name: "Web3Wave Community" }],
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "Web3Wave — Building the Onchain Future",
     description: "Connect with developers, founders, creators, and builders shaping the web3 & AI ecosystem.",

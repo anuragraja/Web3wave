@@ -21,7 +21,7 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
     const handleScroll = () => {
       setScrolled(window.scrollY > 15)
     }
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 

@@ -522,7 +522,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
               </div>
 
               {/* Continue with Google OAuth Button */}
-              <button
+              {/* <button
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isSubmitting}
@@ -551,13 +551,13 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                   </svg>
                 )}
                 <span>Continue with Google</span>
-              </button>
+              </button> */}
 
-              <div className="flex items-center gap-3 mb-4">
+              {/* <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 h-px bg-white/10" />
                 <span className="text-[10px] font-mono text-zinc-500 uppercase">OR EMAIL</span>
                 <div className="flex-1 h-px bg-white/10" />
-              </div>
+              </div> */}
             </>
           )}
 

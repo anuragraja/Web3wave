@@ -39,53 +39,20 @@ export interface Workshop {
 
 export const sampleWorkshops: Workshop[] = [
   {
-    id: 'workshop-solidity-foundry',
-    title: 'Solidity & Foundry Architecture Masterclass',
-    instructor: 'Aarav Sharma',
-    instructorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-    dateString: 'Sunday, Nov 02, 2026',
-    timeString: '11:00 AM - 4:00 PM IST',
-    venue: 'MANIT Tinkering Lab, Bhopal',
-    level: 'Intermediate',
-    techStack: ['Solidity', 'Foundry', 'Ethers.js', 'Arbitrum Sepolia'],
-    coverImage: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1000&q=85',
-    description: 'Hands-on developer workshop covering smart contract unit testing, invariant tests, gas optimization tricks, and live deployment.',
-    starterKitRepo: 'https://github.com/web3wave/foundry-starter-kit',
-    seatsLeft: 8,
-    capacity: 50
-  },
-  {
-    id: 'workshop-ai-telegram-bot',
-    title: 'Building Autonomous AI Telegram Agents on Base',
-    instructor: 'Priya Rathore',
-    instructorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
-    dateString: 'Saturday, Dec 05, 2026',
-    timeString: '4:00 PM - 7:00 PM IST',
-    venue: 'LNCT Tech Nest & Live Stream',
+    id: 'blockchain-creative-web-dev',
+    title: 'Blockchain & Creative Web Development',
+    instructor: 'Industry Experts',
+    instructorAvatar: '/web3wave-logo.png',
+    dateString: '27 September 2026',
+    timeString: '12:30 PM Onwards',
+    venue: 'Nexians Academy, Transport Nagar, Near Bansal College, Bhopal',
     level: 'Beginner',
-    techStack: ['Python', 'ElizaOS', 'Base L2', 'Web3.py'],
-    coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=85',
-    description: 'Create an AI bot that listens to user commands on Telegram, signs transactions, and transfers tokens on Base L2.',
-    starterKitRepo: 'https://github.com/web3wave/ai-agent-bot-template',
-    seatsLeft: 15,
-    capacity: 60
-  },
-  {
-    id: 'workshop-zk-proofs-101',
-    title: 'Zero-Knowledge Proofs 101: Circom & Noir',
-    instructor: 'Devansh Kulkarni',
-    instructorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-    dateString: 'Sunday, Dec 20, 2026',
-    timeString: '2:00 PM - 6:00 PM IST',
-    venue: 'Bhopal Innovation Center',
-    level: 'Advanced',
-    techStack: ['Circom', 'Noir', 'SnarkJS', 'Next.js'],
-    coverImage: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1000&q=85',
-    description: 'Learn zero-knowledge circuit math, write your first zk-SNARK proof, and integrate onchain verification into Next.js.',
-    starterKitRepo: 'https://github.com/web3wave/zk-noir-demo',
-    recordingUrl: 'https://youtube.com',
-    seatsLeft: 5,
-    capacity: 40
+    techStack: ['Learn', 'Build', 'Network', '1 Day Workshop'],
+    coverImage: '/gallery/creatatievWebDev.png',
+    description: 'A hands-on, beginner-friendly workshop to explore Web3 technologies and modern creative web development with industry experts.',
+    starterKitRepo: 'https://github.com/anuragraja/Web3wave',
+    seatsLeft: 25,
+    capacity: 100
   }
 ]
 
@@ -111,20 +78,20 @@ export function WorkshopsSection({ onReserveWorkshop }: WorkshopsSectionProps) {
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5">
               <Terminal className="w-3.5 h-3.5 text-rose-400" />
-              Hands-On Technical Masterclasses
+              1 Day Hands-On Workshop
             </span>
           </div>
           <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-            Code & Build Live with Expert Mentors
+            Blockchain & Creative Web Development
           </h2>
           <p className="text-xs md:text-sm text-zinc-300">
-            Every workshop includes live coding, starter templates, POAP badges, and peer code reviews.
+            A hands-on, beginner-friendly workshop to explore Web3 technologies and modern creative web development with industry experts.
           </p>
         </div>
 
         {/* Level Filter Switcher */}
         <div className="relative z-10 flex items-center gap-2 bg-white/5 border border-white/10 p-1.5 rounded-full">
-          {['All Levels', 'Beginner', 'Intermediate', 'Advanced'].map((lvl) => (
+          {['All Levels', 'Beginner'].map((lvl) => (
             <button
               key={lvl}
               onClick={() => setLevelFilter(lvl)}
@@ -140,103 +107,160 @@ export function WorkshopsSection({ onReserveWorkshop }: WorkshopsSectionProps) {
         </div>
       </div>
 
-      {/* Workshop Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Featured Real Workshop Card */}
+      <div className="max-w-4xl mx-auto w-full">
         {filteredWorkshops.map((workshop) => (
           <motion.div
             key={workshop.id}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl bg-[#121217] border border-white/10 overflow-hidden flex flex-col justify-between hover:border-rose-500/40 hover:shadow-[0_0_30px_rgba(244,63,94,0.15)] transition-all group"
+            className="relative rounded-3xl bg-[#121217] border border-white/10 overflow-hidden flex flex-col justify-between hover:border-rose-500/40 hover:shadow-[0_0_30px_rgba(244,63,94,0.15)] transition-all group"
           >
-            <BorderBeam size="sm" />
+            <BorderBeam size="md" colorVariant="colorful" />
             <div>
-              {/* Cover Image */}
-              <div className="relative h-48 w-full overflow-hidden bg-zinc-900">
+              {/* Cover Image / Poster */}
+              <div className="relative w-full overflow-hidden bg-black/60 flex items-center justify-center border-b border-white/10">
                 <img
                   src={workshop.coverImage}
-                  alt={workshop.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  alt="Blockchain & Creative Web Development Workshop"
+                  className="w-full h-auto max-h-[460px] object-contain transition-transform duration-500 group-hover:scale-[1.01]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#121217] via-transparent to-transparent" />
 
-                <div className="absolute top-3 left-3 flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider backdrop-blur-md ${
-                    workshop.level === 'Beginner'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : workshop.level === 'Intermediate'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                      : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                  }`}>
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider backdrop-blur-md bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
                     {workshop.level}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider backdrop-blur-md bg-rose-500/20 text-rose-300 border-rose-500/30">
+                    1 Day Workshop
                   </span>
                 </div>
 
-                <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-[10px] font-mono text-zinc-300 border border-white/10">
+                <div className="absolute bottom-4 right-4 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-[11px] font-mono text-zinc-300 border border-white/10">
                   {workshop.seatsLeft} Seats Left
                 </div>
               </div>
 
               {/* Content Body */}
-              <div className="p-5 space-y-4">
-                <div className="flex items-center gap-2.5">
-                  <img
-                    src={workshop.instructorAvatar}
-                    alt={workshop.instructor}
-                    className="w-7 h-7 rounded-full object-cover border border-rose-500/30"
-                  />
-                  <div className="text-xs">
-                    <span className="text-zinc-400">Instructor: </span>
-                    <span className="font-bold text-white">{workshop.instructor}</span>
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={workshop.instructorAvatar}
+                      alt={workshop.instructor}
+                      className="w-8 h-8 rounded-full object-cover border border-rose-500/30 bg-[#121217] p-0.5"
+                    />
+                    <div className="text-xs">
+                      <span className="text-zinc-400">Organized by: </span>
+                      <span className="font-bold text-white">Web3Wave x Nexians Academy</span>
+                    </div>
+                  </div>
+
+                  {/* Tech Stack Pills */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {workshop.techStack.map((tech, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-1 rounded-md text-xs font-mono bg-white/5 border border-white/10 text-rose-300"
+                      >
+                        {tech}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
-                <h3 className="text-base font-extrabold text-white leading-snug group-hover:text-rose-300 transition-colors">
-                  {workshop.title}
-                </h3>
-
-                <p className="text-xs text-zinc-300 leading-relaxed line-clamp-3">
-                  {workshop.description}
-                </p>
-
-                {/* Tech Stack Pills */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {workshop.techStack.map((tech, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-white/5 border border-white/10 text-rose-300"
-                    >
-                      {tech}
-                    </span>
-                  ))}
+                <div>
+                  <h3 className="text-2xl sm:text-3xl font-extrabold text-white leading-snug group-hover:text-rose-300 transition-colors">
+                    {workshop.title}
+                  </h3>
+                  <p className="text-sm text-zinc-300 leading-relaxed mt-2">
+                    {workshop.description}
+                  </p>
                 </div>
 
-                {/* Meta details */}
-                <div className="space-y-1.5 text-xs text-zinc-400 pt-2 border-t border-white/10">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{workshop.dateString}</span>
+                {/* Highlights Grid */}
+                <div className="space-y-2">
+                  <div className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                    Workshop Highlights
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{workshop.timeString}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-start gap-3">
+                      <span className="text-xl">🎁</span>
+                      <div>
+                        <div className="text-xs font-bold text-white">Free Goodies</div>
+                        <div className="text-[11px] text-zinc-400">Stickers, Swags & More</div>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-start gap-3">
+                      <span className="text-xl">💡</span>
+                      <div>
+                        <div className="text-xs font-bold text-white">Ideas & Inspiration</div>
+                        <div className="text-[11px] text-zinc-400">Discover new ideas, trends and opportunities in Web3</div>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-start gap-3">
+                      <span className="text-xl">🤝</span>
+                      <div>
+                        <div className="text-xs font-bold text-white">Meet & Network</div>
+                        <div className="text-[11px] text-zinc-400">With like-minded builders, designers and Web3 enthusiasts</div>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-start gap-3">
+                      <span className="text-xl">💻</span>
+                      <div>
+                        <div className="text-xs font-bold text-white">Learn from Industry Experts</div>
+                        <div className="text-[11px] text-zinc-400">Hands-on Sessions & Live Demos</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-zinc-400" />
-                    <span className="truncate">{workshop.venue}</span>
+                </div>
+
+                {/* Meta details: Date/Time & Venue */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs text-zinc-300 pt-4 border-t border-white/10">
+                  <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0 mt-0.5">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono font-bold tracking-wider">
+                        Date & Time
+                      </div>
+                      <div className="text-white font-black text-sm sm:text-base mt-0.5">
+                        {workshop.dateString}
+                      </div>
+                      <div className="text-rose-400 font-mono text-xs font-bold mt-0.5">
+                        {workshop.timeString}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 p-4 rounded-2xl bg-white/[0.03] border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.06)]">
+                    <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 mt-0.5">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] text-cyan-400 uppercase font-mono font-bold tracking-wider">
+                        Venue & Location
+                      </div>
+                      <div className="text-white font-black text-sm sm:text-base mt-0.5">
+                        Nexians Academy
+                      </div>
+                      <div className="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed mt-1">
+                        Transport Nagar, Near Bansal College, Bhopal
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Bottom Actions */}
-            <div className="p-5 pt-0 space-y-2">
+            <div className="p-6 sm:p-8 pt-0 flex flex-col sm:flex-row items-center gap-3">
               <button
                 onClick={() => onReserveWorkshop(workshop)}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-xs font-extrabold text-white transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
+                className="w-full sm:flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-sm font-extrabold text-white transition-all shadow-[0_0_25px_rgba(244,63,94,0.35)] flex items-center justify-center gap-2"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Reserve Seat & Get Starter Kit</span>
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Reserve Seat & View Details</span>
               </button>
 
               {workshop.starterKitRepo && (
@@ -244,11 +268,11 @@ export function WorkshopsSection({ onReserveWorkshop }: WorkshopsSectionProps) {
                   href={workshop.starterKitRepo}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-zinc-300 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto py-3.5 px-5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-zinc-300 transition-all flex items-center justify-center gap-2"
                 >
-                  <Code2 className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>GitHub Starter Repo</span>
-                  <ExternalLink className="w-3 h-3 text-zinc-500" />
+                  <Code2 className="w-4 h-4 text-cyan-400" />
+                  <span>Explore Community Repo</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
                 </a>
               )}
             </div>

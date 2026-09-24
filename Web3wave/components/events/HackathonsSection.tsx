@@ -45,69 +45,7 @@ export interface HackathonItem {
   tracks: HackathonTrack[]
 }
 
-export const sampleHackathons: HackathonItem[] = [
-  {
-    id: 'web3wave-genesis-2026',
-    title: 'Web3Wave Genesis Hackathon 2026',
-    status: 'REGISTRATIONS OPEN',
-    dateRange: 'Nov 14 - Nov 16, 2026',
-    prizePool: '$25,000 in USDC & Bounties',
-    venue: 'Bhopal Innovation Center & Virtual Discord',
-    participantsCount: 240,
-    coverImage: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=85',
-    description: 'Central India flagship 48-hour hybrid Web3 hackathon. Build dApps, AI Agents, or ZK primitives for global protocol grants.',
-    tracks: [
-      {
-        id: 'ai-agents',
-        title: 'Autonomous AI & Onchain Agents',
-        sponsor: 'Fetch.ai x Base',
-        prize: '$8,000 USDC',
-        icon: Cpu,
-        description: 'Build self-sovereign AI agents executing transactions, trading, or governance onchain.',
-        color: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/30 text-cyan-400'
-      },
-      {
-        id: 'defi-zk',
-        title: 'DeFi Innovation & ZK Privacy',
-        sponsor: 'Polygon Guild',
-        prize: '$7,500 USDC',
-        icon: ShieldCheck,
-        description: 'Privacy-preserving financial primitives, zero-knowledge proofs, and liquid staking tools.',
-        color: 'from-purple-500/20 to-rose-500/10 border-purple-500/30 text-purple-400'
-      },
-      {
-        id: 'public-goods',
-        title: 'Local Web3 & Public Goods',
-        sponsor: 'Ethereum Foundation Grant',
-        prize: '$5,500 USDC',
-        icon: Globe2,
-        description: 'Onchain identity, local micro-payments, campus DAO governance, and verifiable credentials.',
-        color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/30 text-emerald-400'
-      },
-      {
-        id: 'pool-open',
-        title: 'Open Builder & Student Track',
-        sponsor: 'Web3Wave Catalyst',
-        prize: '$4,000 USDC',
-        icon: Code2,
-        description: 'For first-time Web3 developers shipping high-potential web3 prototypes.',
-        color: 'from-amber-500/20 to-orange-500/10 border-amber-500/30 text-amber-400'
-      }
-    ]
-  },
-  {
-    id: 'eth-bhopal-sprint',
-    title: 'ETH-Bhopal Overnight Code Sprint',
-    status: 'UPCOMING',
-    dateRange: 'Dec 05, 2026',
-    prizePool: '$5,000 USDC Bounties',
-    venue: 'MANIT Tinkering Lab, Bhopal',
-    participantsCount: 110,
-    coverImage: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=85',
-    description: '12-hour high-speed overnight hackathon focused on Solidity smart contract optimization and gas-free user onboarding.',
-    tracks: []
-  }
-]
+export const sampleHackathons: HackathonItem[] = []
 
 interface HackathonsSectionProps {
   onRegisterHackathon: (hackathon: HackathonItem) => void
@@ -126,6 +64,16 @@ export function HackathonsSection({ onRegisterHackathon }: HackathonsSectionProp
     }, 1000)
     return () => clearInterval(timer)
   }, [])
+
+  if (!featured) {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-[#121624]/60 p-8 text-center text-zinc-400">
+        <Trophy className="w-8 h-8 text-cyan-400 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-white mb-1">Hackathon Season Announced Soon</h3>
+        <p className="text-xs text-zinc-400">Stay tuned for upcoming hackathon tracks and bounty announcements.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-12">
