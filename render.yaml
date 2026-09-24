@@ -2,7 +2,6 @@ services:
   - type: web
     name: web3wave-frontend
     env: node
-    rootDir: Web3wave
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: cd Web3wave && npm install && npm run build
+    startCommand: cd Web3wave && npm start
     autoDeploy: true
