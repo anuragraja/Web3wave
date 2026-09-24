@@ -1,0 +1,10 @@
+{
+  "name": "web3wave",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd Web3wave && npm install && npm run build",
+    "start": "cd Web3wave && npm start",
+    "dev": "cd Web3wave && npm start"
+  }
+}
