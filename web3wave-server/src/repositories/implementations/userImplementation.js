@@ -51,9 +51,15 @@ class MongoUserRepository extends IUserRepository {
                         googleId: 1,
                         isVerified: 1,
                         role: {
-                            _id: "$role._id",
-                            name: "$role.name",
-                            description: "$role.description",
+                            $cond: [
+                                { $ifNull: ["$role", false] },
+                                {
+                                    _id: "$role._id",
+                                    name: "$role.name",
+                                    description: "$role.description",
+                                },
+                                null,
+                            ],
                         },
                     },
                 },
@@ -94,9 +100,15 @@ class MongoUserRepository extends IUserRepository {
                         googleId: 1,
                         isVerified: 1,
                         role: {
-                            _id: "$role._id",
-                            name: "$role.name",
-                            description: "$role.description",
+                            $cond: [
+                                { $ifNull: ["$role", false] },
+                                {
+                                    _id: "$role._id",
+                                    name: "$role.name",
+                                    description: "$role.description",
+                                },
+                                null,
+                            ],
                         },
                     },
                 },

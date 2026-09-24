@@ -23,11 +23,10 @@ client.on("connect", () => {
 
 export async function connectRedis() {
     try {
-
         await client.connect();
     } catch (error) {
-        logger.error("Failed to connect to Redis:", error);
-        process.exit(1);
+        logger.error("Failed to connect to Redis:", error.message);
+        throw error;
     }
 }
 

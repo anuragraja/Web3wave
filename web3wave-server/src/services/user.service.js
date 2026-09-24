@@ -471,9 +471,16 @@ class UserService {
             throw new AppError("Invalid Google user payload", 401);
         }
 
-        if (GOOGLE_ID && googlePayload.aud !== GOOGLE_ID) {
-            logger.error(`Google client ID mismatch: received ${googlePayload.aud}`);
-            throw new AppError("Unauthorized: Google Client ID mismatch", 401);
+        if (googlePayload.email_verified !== "true" && googlePayload.email_verified !== true) {
+            throw new AppError("Google account email is not verified", 401);
+        }
+
+        if (GOOGLE_ID) {
+            const allowedGoogleIds = GOOGLE_ID.split(",").map((id) => id.trim()).filter(Boolean);
+            if (allowedGoogleIds.length > 0 && !allowedGoogleIds.includes(googlePayload.aud)) {
+                logger.error(`Google client ID mismatch: received ${googlePayload.aud}`);
+                throw new AppError("Unauthorized: Google Client ID mismatch", 401);
+            }
         }
 
         const googleId = googlePayload.sub;
@@ -497,15 +504,36 @@ class UserService {
                     "Standard User Role"
                 );
 
-                const newUser = await this.userRepository.createUser({
-                    email,
-                    name,
-                    googleId,
-                    roleId: userRole._id,
-                    isVerified: true,
-                });
+                try {
+                    const newUser = await this.userRepository.createUser({
+                        email,
+                        name,
+                        googleId,
+                        roleId: userRole._id,
+                        isVerified: true,
+                    });
 
-                userWithRole = await this.userRepository.findUserById(newUser._id);
+                    userWithRole = await this.userRepository.findUserById(newUser._id);
+
+                    try {
+                        await sendWelcomeEmail({ to: email, name });
+                    } catch (emailErr) {
+                        logger.warn(`Failed to send welcome email to Google user ${email}: ${emailErr.message}`);
+                    }
+                } catch (createError) {
+                    if (createError.statusCode === 409 || createError.code === 11000) {
+                        userWithRole = await this.userRepository.findUserByEmail(email);
+                        if (userWithRole) {
+                            await this.userRepository.updateUser(userWithRole._id, {
+                                googleId,
+                                isVerified: true,
+                            });
+                            userWithRole = await this.userRepository.findUserById(userWithRole._id);
+                        }
+                    } else {
+                        throw createError;
+                    }
+                }
             }
         }
 
@@ -528,7 +556,11 @@ class UserService {
             expiresIn: REFRESH_EXPIRES_IN,
         });
 
-        await this.saveRefreshToken(userWithRole._id, refreshToken);
+        try {
+            await this.saveRefreshToken(userWithRole._id, refreshToken);
+        } catch (redisErr) {
+            logger.warn(`Failed to cache refresh token in Redis for user ${safeUser._id}: ${redisErr.message}`);
+        }
 
         return {
             user: safeUser,

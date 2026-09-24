@@ -1,5 +1,14 @@
 import dotenv from "dotenv";
-dotenv.config();
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+if (!process.env.MONGODB_URI) {
+    dotenv.config();
+}
 
 export default {
     MONGODB_URI: process.env.MONGODB_URI ,
@@ -13,8 +22,6 @@ export default {
     NODE_ENV: process.env.NODE_ENV ,
     GOOGLE_ID: process.env.GOOGLE_ID,
     GOOGLE_SECRET: process.env.GOOGLE_SECRET,
-    GOOGLE_REFRESH_TOKEN: process.env.GOOGLE_REFRESH_TOKEN,
-    GOOGLE_USER: process.env.GOOGLE_USER,
     BREVO_API_KEY: process.env.BREVO_API_KEY ,
     BREVO_SENDER_MAIL: process.env.BREVO_SENDER_MAIL,
     BREVO_SENDER_NAME: process.env.BREVO_SENDER_NAME,
