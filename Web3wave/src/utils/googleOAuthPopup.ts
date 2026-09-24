@@ -1,7 +1,10 @@
 /**
  * Direct Google OAuth 2.0 Implicit Flow (No Firebase Auth Console dependency)
  */
-export function openGoogleOAuthPopup(clientId: string): Promise<string> {
+export function openGoogleOAuthPopup(
+  clientId: string,
+  preOpenedPopup?: Window | null
+): Promise<string> {
   return new Promise((resolve, reject) => {
     if (typeof window === "undefined") {
       return reject(new Error("Browser environment required."));
@@ -22,11 +25,24 @@ export function openGoogleOAuthPopup(clientId: string): Promise<string> {
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
 
-    const popup = window.open(
-      googleAuthUrl,
-      "Google OAuth Sign In",
-      `width=${width},height=${height},top=${top},left=${left}`
-    );
+    let popup = preOpenedPopup;
+    if (popup && !popup.closed) {
+      try {
+        popup.location.href = googleAuthUrl;
+      } catch {
+        popup = window.open(
+          googleAuthUrl,
+          "Google OAuth Sign In",
+          `width=${width},height=${height},top=${top},left=${left}`
+        );
+      }
+    } else {
+      popup = window.open(
+        googleAuthUrl,
+        "Google OAuth Sign In",
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+    }
 
     if (!popup) {
       return reject(
@@ -45,12 +61,21 @@ export function openGoogleOAuthPopup(clientId: string): Promise<string> {
 
         if (popup.location.href.includes(redirectUri)) {
           const hash = popup.location.hash;
-          popup.close();
-          clearInterval(timer);
-          window.removeEventListener("message", messageHandler);
+          const search = popup.location.search;
+          const errorMatch = hash.match(/error=([^&]+)/) || search.match(/error=([^&]+)/);
+          if (errorMatch && errorMatch[1]) {
+            popup.close();
+            clearInterval(timer);
+            window.removeEventListener("message", messageHandler);
+            reject(new Error(`Google Sign-In failed: ${decodeURIComponent(errorMatch[1])}`));
+            return;
+          }
 
           const match = hash.match(/id_token=([^&]+)/);
           if (match && match[1]) {
+            popup.close();
+            clearInterval(timer);
+            window.removeEventListener("message", messageHandler);
             resolve(match[1]);
           } else {
             reject(new Error("Failed to extract Google ID token from response."));

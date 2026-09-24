@@ -21,6 +21,7 @@ export interface CompanyUser {
   companyName: string;
   email: string;
   number?: string;
+  phone?: string;
   website?: string;
   role?: string;
   isVerified?: boolean;
@@ -30,7 +31,18 @@ export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   data?: T;
+  requiresOtp?: boolean;
 }
+
+export interface LoginResponseData {
+  user?: User;
+  company?: CompanyUser;
+  token?: string;
+  refreshToken?: string;
+  requiresOtp?: boolean;
+  message?: string;
+}
+
 
 export interface RegisterUserRequest {
   name: string;
@@ -60,9 +72,10 @@ export interface ResendOtpRequest {
 export interface RegisterCompanyRequest {
   companyName: string;
   email: string;
-  number: string;
-  website: string;
-  role: string;
+  number?: string;
+  phone?: string;
+  website?: string;
+  role?: string;
   password: string;
 }
 

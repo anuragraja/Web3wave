@@ -42,8 +42,18 @@ type CompanyTab =
   | "campaigns";
 
 export default function CompaniesPage() {
-  const { company, loginCompany, registerCompany, logoutCompany } = useAuth();
-  const [authMode, setAuthMode] = useState<"register" | "login">("register");
+  const {
+    company,
+    loginCompany,
+    verifyCompanyLoginOtp,
+    resendCompanyLoginOtp,
+    registerCompany,
+    verifyCompanyEmail,
+    resendCompanyVerification,
+    logoutCompany,
+  } = useAuth();
+  const [authMode, setAuthMode] = useState<"register" | "login" | "verify_email">("register");
+  const [isLoginOtp, setIsLoginOtp] = useState(false);
   const [activeTab, setActiveTab] = useState<CompanyTab>("building");
   const [companyName, setCompanyName] = useState("");
   const [companyEmail, setCompanyEmail] = useState("");
@@ -51,9 +61,11 @@ export default function CompaniesPage() {
   const [companyWebsite, setCompanyWebsite] = useState("");
   const [companyRole, setCompanyRole] = useState("");
   const [companyPassword, setCompanyPassword] = useState("");
+  const [companyOtp, setCompanyOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const signedIn = !!company;
@@ -69,6 +81,7 @@ export default function CompaniesPage() {
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setSuccessMsg("");
 
     if (authMode === "register") {
       if (!companyName.trim()) {
@@ -98,14 +111,18 @@ export default function CompaniesPage() {
 
       setIsSubmitting(true);
       try {
-        await registerCompany({
+        const res = await registerCompany({
           companyName,
           email: companyEmail,
+          phone: companyMobile,
           number: companyMobile,
           website: companyWebsite,
           role: companyRole,
           password: companyPassword,
         });
+        setIsLoginOtp(false);
+        setSuccessMsg("Company registered! Verification code sent to official business email.");
+        setAuthMode("verify_email");
       } catch (err: any) {
         setErrorMsg(err.message || "Company registration failed.");
       } finally {
@@ -124,15 +141,69 @@ export default function CompaniesPage() {
 
       setIsSubmitting(true);
       try {
-        await loginCompany({
+        const res = await loginCompany({
           email: companyEmail,
           password: companyPassword,
         });
+        if (res?.requiresOtp) {
+          setIsLoginOtp(true);
+          setSuccessMsg("A 6-digit login verification code has been sent to your email.");
+          setAuthMode("verify_email");
+        } else {
+          setSuccessMsg("Welcome back!");
+        }
       } catch (err: any) {
-        setErrorMsg(err.message || "Invalid email or password.");
+        if (err.message?.toLowerCase().includes("verify your email")) {
+          setErrorMsg(err.message);
+          setIsLoginOtp(false);
+          setAuthMode("verify_email");
+        } else {
+          setErrorMsg(err.message || "Invalid email or password.");
+        }
       } finally {
         setIsSubmitting(false);
       }
+    }
+  };
+
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (!companyOtp.trim() || companyOtp.trim().length !== 6) {
+      setErrorMsg("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (isLoginOtp) {
+        await verifyCompanyLoginOtp(companyEmail, companyOtp.trim());
+        setSuccessMsg("Login successful! Welcome to Web3Wave.");
+      } else {
+        await verifyCompanyEmail(companyEmail, companyOtp.trim());
+        setSuccessMsg("Email verified successfully! Welcome to Web3Wave.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to verify email OTP.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendCompanyOtp = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      if (isLoginOtp) {
+        await resendCompanyLoginOtp(companyEmail);
+      } else {
+        await resendCompanyVerification(companyEmail);
+      }
+      setSuccessMsg("New 6-digit verification code sent to your official email.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to resend code.");
     }
   };
 
@@ -223,6 +294,7 @@ export default function CompaniesPage() {
                 onClick={() => {
                   setAuthMode("register");
                   setErrorMsg("");
+                  setSuccessMsg("");
                 }}
                 className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-center ${
                   authMode === "register"
@@ -237,6 +309,7 @@ export default function CompaniesPage() {
                 onClick={() => {
                   setAuthMode("login");
                   setErrorMsg("");
+                  setSuccessMsg("");
                 }}
                 className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-center ${
                   authMode === "login"
@@ -246,13 +319,30 @@ export default function CompaniesPage() {
               >
                 Company Sign In
               </button>
+              {authMode === "verify_email" && (
+                <button
+                  type="button"
+                  className="flex-1 py-2.5 rounded-lg font-bold transition-all text-center bg-rose-500 text-white shadow-md shadow-rose-500/20"
+                >
+                  Verify Email
+                </button>
+              )}
             </div>
 
             <p className="text-xs text-zinc-400 leading-relaxed mb-6">
               {authMode === "register"
                 ? "Empower your Web3 protocol or company to build, grow, hire talent, and sponsor hackathons with Central India's 500+ developers."
-                : "Sign in with your registered company official business email to manage campaigns, post bounties, and connect with builders."}
+                : authMode === "login"
+                ? "Sign in with your registered company official business email to manage campaigns, post bounties, and connect with builders."
+                : "Enter the 6-digit verification code sent to your official company business email to activate your company account."}
             </p>
+
+            {successMsg && (
+              <div className="mb-6 p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="mb-6 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
@@ -261,6 +351,67 @@ export default function CompaniesPage() {
               </div>
             )}
 
+            {authMode === "verify_email" ? (
+              <form onSubmit={handleVerifyEmail} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono font-bold text-zinc-300 uppercase mb-1.5">
+                    Official Business Email
+                  </label>
+                  <input
+                    type="email"
+                    value={companyEmail}
+                    onChange={(e) => setCompanyEmail(e.target.value)}
+                    required
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-rose-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono font-bold text-zinc-300 uppercase mb-1.5">
+                    6-Digit Verification Code <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={companyOtp}
+                    onChange={(e) => setCompanyOtp(e.target.value)}
+                    placeholder="000000"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-lg font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-rose-500 transition-colors"
+                  />
+                  <p className="text-[11px] font-mono text-zinc-500 mt-1">
+                    Check your business inbox for the 6-digit OTP verification code.
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full btn-luma-accent py-3.5 text-sm font-bold justify-center mt-4"
+                >
+                  <span>{isSubmitting ? "Verifying..." : isLoginOtp ? "Verify & Sign In" : "Verify Official Email & Continue"}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <div className="pt-2 flex items-center justify-between text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={handleResendCompanyOtp}
+                    className="text-zinc-400 hover:text-rose-400 transition-colors"
+                  >
+                    Didn't receive code? Resend OTP
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setErrorMsg("");
+                      setSuccessMsg("");
+                    }}
+                    className="text-rose-400 hover:underline"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </form>
+            ) : (
             <form onSubmit={handleAuthSubmit} className="space-y-4">
               {authMode === "register" && (
                 <>
@@ -419,6 +570,7 @@ export default function CompaniesPage() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </form>
+            )}
 
             <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-zinc-500 font-mono">
               <span>Are you an individual developer?</span>

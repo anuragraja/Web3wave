@@ -13,6 +13,8 @@ import {
 import {
   getMeApi,
   loginUserApi,
+  verifyLoginOtpApi,
+  resendLoginOtpApi,
   registerUserApi,
   googleAuthApi,
   verifyEmailApi,
@@ -20,6 +22,11 @@ import {
   logoutUserApi,
   registerCompanyApi,
   loginCompanyApi,
+  verifyCompanyLoginOtpApi,
+  resendCompanyLoginOtpApi,
+  getCompanyMeApi,
+  verifyCompanyEmailApi,
+  resendCompanyVerificationApi,
   logoutCompanyApi,
   forgotPasswordApi,
   verifyResetOtpApi,
@@ -31,14 +38,20 @@ interface AuthContextType {
   company: CompanyUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  loginUser: (credentials: LoginUserRequest) => Promise<User>;
-  registerUser: (data: RegisterUserRequest) => Promise<{ user: User; message?: string }>;
+  loginUser: (credentials: LoginUserRequest) => Promise<{ requiresOtp?: boolean; user?: User; message?: string }>;
+  verifyLoginOtp: (email: string, otp: string) => Promise<User>;
+  resendLoginOtp: (email: string) => Promise<void>;
+  registerUser: (data: RegisterUserRequest) => Promise<{ user?: User; requiresOtp?: boolean; message?: string }>;
   googleAuth: (idToken: string) => Promise<User>;
-  verifyEmail: (email: string, otp: string) => Promise<void>;
+  verifyEmail: (email: string, otp: string) => Promise<User | undefined>;
   resendVerification: (email: string) => Promise<void>;
   logoutUser: () => Promise<void>;
-  loginCompany: (credentials: LoginCompanyRequest) => Promise<CompanyUser>;
-  registerCompany: (data: RegisterCompanyRequest) => Promise<CompanyUser>;
+  loginCompany: (credentials: LoginCompanyRequest) => Promise<{ requiresOtp?: boolean; company?: CompanyUser; message?: string }>;
+  verifyCompanyLoginOtp: (email: string, otp: string) => Promise<CompanyUser>;
+  resendCompanyLoginOtp: (email: string) => Promise<void>;
+  registerCompany: (data: RegisterCompanyRequest) => Promise<{ company?: CompanyUser; requiresOtp?: boolean; message?: string }>;
+  verifyCompanyEmail: (email: string, otp: string) => Promise<CompanyUser | undefined>;
+  resendCompanyVerification: (email: string) => Promise<void>;
   logoutCompany: () => Promise<void>;
   checkAuth: () => Promise<void>;
   forgotPassword: (email: string, isCompany?: boolean) => Promise<string>;
@@ -65,19 +78,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch {
       setUser(null);
-    } finally {
-      // Check company session from localStorage as fallback/UI state if present
+    }
+
+    try {
+      const companyRes = await getCompanyMeApi();
+      if (companyRes.success && companyRes.data) {
+        setCompany(companyRes.data);
+        localStorage.setItem("web3wave_company_session", JSON.stringify(companyRes.data));
+      } else {
+        const savedCompany = localStorage.getItem("web3wave_company_session");
+        if (savedCompany) {
+          try {
+            setCompany(JSON.parse(savedCompany));
+          } catch {
+            setCompany(null);
+          }
+        } else {
+          setCompany(null);
+        }
+      }
+    } catch {
       const savedCompany = localStorage.getItem("web3wave_company_session");
       if (savedCompany) {
         try {
-          const parsed = JSON.parse(savedCompany);
-          if (parsed.companyEmail) {
-            setCompany(parsed);
-          }
-        } catch (e) {
-          console.error("Failed parsing company session", e);
+          setCompany(JSON.parse(savedCompany));
+        } catch {
+          setCompany(null);
         }
+      } else {
+        setCompany(null);
       }
+    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -86,23 +117,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, [checkAuth]);
 
-  const loginUser = async (credentials: LoginUserRequest): Promise<User> => {
+  const loginUser = async (credentials: LoginUserRequest): Promise<{ requiresOtp?: boolean; user?: User; message?: string }> => {
     const res = await loginUserApi(credentials);
-    const loggedInUser = res.data?.user;
+    const data = res.data;
+    if (data?.requiresOtp || res.requiresOtp) {
+      return { requiresOtp: true, message: res.message || data?.message };
+    }
+    const loggedInUser = data?.user;
     if (loggedInUser) {
       setUser(loggedInUser);
-      return loggedInUser;
+      return { user: loggedInUser, message: res.message };
     }
-    throw new Error("Invalid response from server");
+    throw new Error(res.message || "Invalid response from server");
   };
 
-  const registerUser = async (data: RegisterUserRequest) => {
-    const res = await registerUserApi(data);
-    if (res.data?.user) {
-      setUser(res.data.user);
-      return { user: res.data.user, message: res.message || res.data.message };
+  const verifyLoginOtp = async (email: string, otp: string): Promise<User> => {
+    const res = await verifyLoginOtpApi({ email, otp });
+    const verifiedUser = res.data?.user;
+    if (verifiedUser) {
+      setUser(verifiedUser);
+      return verifiedUser;
     }
-    throw new Error("Failed to register user");
+    throw new Error(res.message || "Failed to verify login code");
+  };
+
+  const resendLoginOtp = async (email: string): Promise<void> => {
+    await resendLoginOtpApi({ email });
+  };
+
+  const registerUser = async (data: RegisterUserRequest): Promise<{ user?: User; requiresOtp?: boolean; message?: string }> => {
+    const res = await registerUserApi(data);
+    const registeredUser = res.data?.user;
+    if (registeredUser || res.requiresOtp || res.data?.requiresOtp || res.success) {
+      return {
+        user: registeredUser,
+        requiresOtp: true,
+        message: res.message || res.data?.message || "Registration successful! A 6-digit verification code has been sent to your email.",
+      };
+    }
+    throw new Error(res.message || "Failed to register user");
   };
 
   const googleAuth = async (idToken: string): Promise<User> => {
@@ -115,10 +168,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     throw new Error("Failed to authenticate with Google");
   };
 
-  const verifyEmail = async (email: string, otp: string) => {
-    await verifyEmailApi({ email, otp });
-    if (user) {
-      setUser({ ...user, isVerified: true });
+  const verifyEmail = async (email: string, otp: string): Promise<User | undefined> => {
+    const res = await verifyEmailApi({ email, otp });
+    const verifiedUser = res.data?.user;
+    if (verifiedUser) {
+      setUser(verifiedUser);
+      return verifiedUser;
+    } else if (user) {
+      const updated = { ...user, isVerified: true };
+      setUser(updated);
+      return updated;
     }
   };
 
@@ -136,29 +195,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginCompany = async (credentials: LoginCompanyRequest): Promise<CompanyUser> => {
+  const loginCompany = async (credentials: LoginCompanyRequest): Promise<{ requiresOtp?: boolean; company?: CompanyUser; message?: string }> => {
     const res = await loginCompanyApi(credentials);
-    const companyData = res.data?.company || {
-      email: credentials.email,
-      companyName: "Verified Company Node",
-    };
-    setCompany(companyData);
-    localStorage.setItem("web3wave_company_session", JSON.stringify(companyData));
-    return companyData;
+    const data = res.data;
+    if (data?.requiresOtp || res.requiresOtp) {
+      return { requiresOtp: true, message: res.message || data?.message };
+    }
+    const companyData = data?.company;
+    if (companyData) {
+      setCompany(companyData);
+      localStorage.setItem("web3wave_company_session", JSON.stringify(companyData));
+      return { company: companyData, message: res.message };
+    }
+    throw new Error(res.message || "Invalid response from server");
   };
 
-  const registerCompany = async (data: RegisterCompanyRequest): Promise<CompanyUser> => {
+  const verifyCompanyLoginOtp = async (email: string, otp: string): Promise<CompanyUser> => {
+    const res = await verifyCompanyLoginOtpApi({ email, otp });
+    const verifiedCompany = res.data?.company;
+    if (verifiedCompany) {
+      setCompany(verifiedCompany);
+      localStorage.setItem("web3wave_company_session", JSON.stringify(verifiedCompany));
+      return verifiedCompany;
+    }
+    throw new Error(res.message || "Failed to verify company login code");
+  };
+
+  const resendCompanyLoginOtp = async (email: string): Promise<void> => {
+    await resendCompanyLoginOtpApi({ email });
+  };
+
+  const registerCompany = async (data: RegisterCompanyRequest): Promise<{ company?: CompanyUser; requiresOtp?: boolean; message?: string }> => {
     const res = await registerCompanyApi(data);
-    const companyData = res.data?.company || {
-      companyName: data.companyName,
-      email: data.email,
-      number: data.number,
-      website: data.website,
-      role: data.role,
-    };
-    setCompany(companyData);
-    localStorage.setItem("web3wave_company_session", JSON.stringify(companyData));
-    return companyData;
+    const companyData = res.data?.company;
+    if (companyData || res.requiresOtp || res.data?.requiresOtp || res.success) {
+      return {
+        company: companyData,
+        requiresOtp: true,
+        message: res.message || res.data?.message || "Company registered successfully. Verification code sent to company email.",
+      };
+    }
+    throw new Error(res.message || "Failed to register company");
+  };
+
+  const verifyCompanyEmail = async (email: string, otp: string): Promise<CompanyUser | undefined> => {
+    const res = await verifyCompanyEmailApi({ email, otp });
+    const verifiedCompany = res.data?.company;
+    if (verifiedCompany) {
+      setCompany(verifiedCompany);
+      localStorage.setItem("web3wave_company_session", JSON.stringify(verifiedCompany));
+      return verifiedCompany;
+    } else if (company) {
+      const updated = { ...company, isVerified: true };
+      setCompany(updated);
+      localStorage.setItem("web3wave_company_session", JSON.stringify(updated));
+      return updated;
+    }
+  };
+
+  const resendCompanyVerification = async (email: string) => {
+    await resendCompanyVerificationApi({ email });
   };
 
   const logoutCompany = async () => {
@@ -203,13 +299,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         isAuthenticated: !!user || !!company,
         loginUser,
+        verifyLoginOtp,
+        resendLoginOtp,
         registerUser,
         googleAuth,
         verifyEmail,
         resendVerification,
         logoutUser,
         loginCompany,
+        verifyCompanyLoginOtp,
+        resendCompanyLoginOtp,
         registerCompany,
+        verifyCompanyEmail,
+        resendCompanyVerification,
         logoutCompany,
         checkAuth,
         forgotPassword,

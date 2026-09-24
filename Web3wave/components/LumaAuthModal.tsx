@@ -22,8 +22,6 @@ import {
   LogIn,
   KeyRound,
 } from "lucide-react";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { useAuth } from "@/src/context/AuthContext";
 import { openGoogleOAuthPopup } from "@/src/utils/googleOAuthPopup";
 
@@ -36,12 +34,18 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
   const router = useRouter();
   const {
     loginUser,
+    verifyLoginOtp,
+    resendLoginOtp,
     registerUser,
     googleAuth,
     verifyEmail,
     resendVerification,
     loginCompany,
+    verifyCompanyLoginOtp,
+    resendCompanyLoginOtp,
     registerCompany,
+    verifyCompanyEmail,
+    resendCompanyVerification,
     forgotPassword,
     verifyResetOtp,
     confirmResetPassword,
@@ -71,6 +75,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
   const [successMsg, setSuccessMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [isLoginOtp, setIsLoginOtp] = useState(false);
 
   // Prevent background page scrolling & pause Lenis when modal is open
   useEffect(() => {
@@ -111,26 +116,41 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
     setSuccessMsg("");
     setIsSubmitting(true);
 
+    // Pre-open popup synchronously on user gesture to prevent browser popup blocker
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    let popupWindow: Window | null = null;
     try {
-      let idToken: string | null = null;
+      popupWindow = window.open(
+        "about:blank",
+        "Google OAuth Sign In",
+        `width=${width},height=${height},top=${top},left=${left}`
+      );
+    } catch {
+      popupWindow = null;
+    }
 
-      try {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        idToken = await result.user.getIdToken();
-      } catch (fbErr: any) {
-        console.warn("Firebase Auth Google Popup failed, using direct Google OAuth...", fbErr);
-        const googleClientId =
-          process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-          "568109394797-preview.apps.googleusercontent.com";
-        idToken = await openGoogleOAuthPopup(googleClientId);
-      }
+    try {
+      const googleClientId =
+        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+        "154081892000-2kjp3cijoi81ivd44auo92aiavuto690.apps.googleusercontent.com";
+
+      const idToken = await openGoogleOAuthPopup(googleClientId, popupWindow);
 
       if (idToken) {
         await googleAuth(idToken);
         onClose();
       }
     } catch (err: any) {
+      if (popupWindow && !popupWindow.closed) {
+        try {
+          popupWindow.close();
+        } catch {
+          // ignore
+        }
+      }
       console.error("Google Auth error:", err);
       if (err?.message?.includes("closed")) {
         setErrorMsg("Google Sign-in popup was closed.");
@@ -168,19 +188,22 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
             number: mobile,
             password,
           });
-          setSuccessMsg(res.message || "Registration successful! Enter 6-digit OTP sent to your email.");
+          setIsLoginOtp(false);
+          setSuccessMsg("Verification code sent to your email!");
           setMode("verify_email");
         } else {
-          await registerCompany({
+          const res = await registerCompany({
             companyName: name,
             email,
+            phone: mobile,
             number: mobile,
             website: website || "https://web3wave.in",
             role: companyRole || "Sponsor",
             password,
           });
-          setSuccessMsg("Company registration successful!");
-          onClose();
+          setIsLoginOtp(false);
+          setSuccessMsg("Verification code sent to company email!");
+          setMode("verify_email");
         }
       } catch (err: any) {
         setErrorMsg(err.message || "Registration failed.");
@@ -191,11 +214,23 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
       setIsSubmitting(true);
       try {
         if (role === "member") {
-          await loginUser({ email, password });
-          onClose();
+          const res = await loginUser({ email, password });
+          if (res?.requiresOtp) {
+            setIsLoginOtp(true);
+            setSuccessMsg("A 6-digit login verification code has been sent to your email.");
+            setMode("verify_email");
+          } else {
+            onClose();
+          }
         } else {
-          await loginCompany({ email, password });
-          onClose();
+          const res = await loginCompany({ email, password });
+          if (res?.requiresOtp) {
+            setIsLoginOtp(true);
+            setSuccessMsg("A 6-digit login verification code has been sent to your email.");
+            setMode("verify_email");
+          } else {
+            onClose();
+          }
         }
       } catch (err: any) {
         setErrorMsg(err.message || "Invalid credentials.");
@@ -217,11 +252,24 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
 
     setIsSubmitting(true);
     try {
-      await verifyEmail(email, otp.trim());
-      setSuccessMsg("Email verified successfully!");
+      if (isLoginOtp) {
+        if (role === "company") {
+          await verifyCompanyLoginOtp(email, otp.trim());
+        } else {
+          await verifyLoginOtp(email, otp.trim());
+        }
+        setSuccessMsg("Login successful! Welcome back.");
+      } else {
+        if (role === "company") {
+          await verifyCompanyEmail(email, otp.trim());
+        } else {
+          await verifyEmail(email, otp.trim());
+        }
+        setSuccessMsg("Email verified successfully! Welcome to Web3Wave.");
+      }
       setTimeout(() => {
         onClose();
-      }, 1000);
+      }, 600);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to verify OTP.");
     } finally {
@@ -306,7 +354,19 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
     setSuccessMsg("");
     try {
       if (mode === "verify_email") {
-        await resendVerification(email);
+        if (isLoginOtp) {
+          if (role === "company") {
+            await resendCompanyLoginOtp(email);
+          } else {
+            await resendLoginOtp(email);
+          }
+        } else {
+          if (role === "company") {
+            await resendCompanyVerification(email);
+          } else {
+            await resendVerification(email);
+          }
+        }
       } else {
         await forgotPassword(email, role === "company");
       }
@@ -778,7 +838,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
+                  placeholder="000000"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-3 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-rose-500 transition-colors"
                 />
               </div>
@@ -909,14 +969,16 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                 <Mail className="w-8 h-8 text-rose-400 mx-auto animate-bounce" />
                 <h3 className="text-sm font-bold text-white">Check Your Inbox</h3>
                 <p className="text-xs text-zinc-400">
-                  We've sent a 6-digit verification OTP to{" "}
+                  {isLoginOtp
+                    ? "We've sent a 6-digit login verification OTP to "
+                    : "We've sent a 6-digit verification OTP to "}
                   <span className="text-white font-mono">{email}</span>
                 </p>
               </div>
 
               <div>
                 <label className="block text-[11px] font-mono font-bold text-zinc-400 uppercase mb-1">
-                  6-Digit Email OTP *
+                  6-Digit {isLoginOtp ? "Login" : "Email"} OTP *
                 </label>
                 <input
                   type="text"
@@ -924,7 +986,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                   required
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
+                  placeholder="000000"
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-3 text-center text-lg font-mono tracking-widest text-white focus:outline-none focus:border-rose-500 transition-colors"
                 />
               </div>
@@ -942,7 +1004,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Verify Email & Complete Sign In</span>
+                    <span>{isLoginOtp ? "Verify & Sign In" : "Verify Email & Complete Registration"}</span>
                   </>
                 )}
               </button>
@@ -962,10 +1024,15 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
 
                 <button
                   type="button"
-                  onClick={() => setMode("register")}
+                  onClick={() => {
+                    setOtp("");
+                    setErrorMsg("");
+                    setSuccessMsg("");
+                    setMode(isLoginOtp ? "login" : "register");
+                  }}
                   className="text-zinc-400 hover:text-white"
                 >
-                  Change Email
+                  {isLoginOtp ? "Back to Login" : "Change Email"}
                 </button>
               </div>
             </form>

@@ -71,11 +71,7 @@ class UserService {
         await this.cacheRepository.set(`email_verify_attempts:${normalizedEmail}`, 0, 300);
         await this.cacheRepository.set(cooldownKey, "1", 60);
 
-        try {
-            await sendVerificationEmail({ to: normalizedEmail, name, otp });
-        } catch (error) {
-            logger.error(`Failed to send verification OTP email to ${normalizedEmail}:`, error);
-        }
+        await sendVerificationEmail({ to: normalizedEmail, name, otp, type: "verification" });
         return true;
     }
 
@@ -100,6 +96,7 @@ class UserService {
             password: userData.password,
             number: userData.number,
             roleId: userRole._id,
+            isVerified: false,
         };
 
         const user = await this.userRepository.createUser(newUserData);
@@ -120,23 +117,13 @@ class UserService {
             3600,
         );
 
-        const jwtPayload = {
-            id: safeUser._id,
-            email: safeUser.email,
-            name: safeUser.name,
-            role: safeUser?.role?.name,
-            isVerified: safeUser?.isVerified,
-        };
-
-        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
-        const refreshToken = jwt.sign({ id: userWithRole._id }, REFRESH_SECRET, {
-            expiresIn: REFRESH_EXPIRES_IN,
-        });
-
-        await this.saveRefreshToken(userWithRole._id, refreshToken);
         await this.sendVerificationOtp(safeUser.email, safeUser.name);
 
-        return { user: safeUser, token, refreshToken, message: "Registration successful. Verification code sent to email." };
+        return {
+            requiresOtp: true,
+            email: safeUser.email,
+            message: "Registration successful! A 6-digit verification code has been sent to your email.",
+        };
     }
 
     async verifyEmail({ email, otp }) {
@@ -144,9 +131,10 @@ class UserService {
             throw new AppError("Email and OTP are required", 400);
         }
         const normalizedEmail = email.toLowerCase().trim();
+        const inputOtp = otp.toString().trim();
+
         const attemptsKey = `email_verify_attempts:${normalizedEmail}`;
         const attempts = (await this.cacheRepository.get(attemptsKey)) || 0;
-
         if (Number(attempts) >= 5) {
             throw new AppError("Too many failed attempts. Please request a new verification code.", 429);
         }
@@ -156,7 +144,7 @@ class UserService {
             throw new AppError("Verification code expired or invalid", 400);
         }
 
-        const inputHashedOtp = this._hashValue(otp.toString().trim());
+        const inputHashedOtp = this._hashValue(inputOtp);
         if (inputHashedOtp !== storedHashedOtp) {
             await this.cacheRepository.set(attemptsKey, Number(attempts) + 1, 300);
             throw new AppError("Invalid verification code", 400);
@@ -172,13 +160,36 @@ class UserService {
         await this.cacheRepository.del(`user:id:${user._id}`);
         await this.cacheRepository.del(`user:email:${normalizedEmail}`);
 
+        const userWithRole = await this.userRepository.findUserById(user._id);
+        const safeUser = this._getSafeUserPayload(userWithRole);
+
+        const jwtPayload = {
+            id: safeUser._id,
+            email: safeUser.email,
+            name: safeUser.name,
+            role: safeUser?.role?.name,
+            isVerified: true,
+        };
+
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
+        const refreshToken = jwt.sign({ id: userWithRole._id }, REFRESH_SECRET, {
+            expiresIn: REFRESH_EXPIRES_IN,
+        });
+
+        await this.saveRefreshToken(userWithRole._id, refreshToken);
+
         try {
             await sendWelcomeEmail({ to: normalizedEmail, name: user.name });
         } catch (error) {
-            logger.error(`Failed to send welcome email to ${normalizedEmail}:`, error);
+            logger.warn(`Failed to send welcome email to ${normalizedEmail}: ${error.message}`);
         }
 
-        return { message: "Email verified successfully" };
+        return {
+            user: safeUser,
+            token,
+            refreshToken,
+            message: "Email verified successfully! You are now signed in.",
+        };
     }
 
     async resendVerificationOtp({ email }) {
@@ -186,27 +197,171 @@ class UserService {
         const normalizedEmail = email.toLowerCase().trim();
         const user = await this.userRepository.findUserByEmail(normalizedEmail);
 
-        if (!user || user.isVerified) {
+        if (!user) {
             return { message: "If an unverified account exists, a new verification code has been sent." };
+        }
+        if (user.isVerified) {
+            throw new AppError("Account email is already verified. Please sign in.", 400);
         }
 
         await this.sendVerificationOtp(user.email, user.name);
         return { message: "Verification code sent successfully" };
     }
 
-    async forgotPassword({ email }) {
+    async login({ email, password }) {
+        if (!email || !password) {
+            throw new AppError("Invalid credentials", 401);
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await this.userRepository.findUserByEmail(normalizedEmail);
+
+        if (!user || !user.password) {
+            throw new AppError("Invalid credentials", 401);
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) throw new AppError("Invalid credentials", 401);
+
+        const cooldownKey = `login_otp_cooldown:${normalizedEmail}`;
+        const isCooldown = await this.cacheRepository.get(cooldownKey);
+        if (isCooldown) {
+            throw new AppError("A verification code was recently sent. Please wait before requesting another code.", 429);
+        }
+
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const hashedOtp = this._hashValue(otp);
+
+        await this.cacheRepository.set(`login_otp:${normalizedEmail}`, hashedOtp, 300);
+        await this.cacheRepository.set(`login_otp_attempts:${normalizedEmail}`, 0, 300);
+        await this.cacheRepository.set(cooldownKey, "1", 60);
+
+        await sendVerificationEmail({
+            to: normalizedEmail,
+            name: user.name,
+            otp,
+            type: "login",
+        });
+
+        return {
+            requiresOtp: true,
+            email: normalizedEmail,
+            message: "A 6-digit verification code has been sent to your email.",
+        };
+    }
+
+    async verifyLoginOtp({ email, otp }) {
+        if (!email || !otp) {
+            throw new AppError("Email and OTP are required", 400);
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+        const inputOtp = otp.toString().trim();
+
+        const attemptsKey = `login_otp_attempts:${normalizedEmail}`;
+        const attempts = (await this.cacheRepository.get(attemptsKey)) || 0;
+        if (Number(attempts) >= 5) {
+            throw new AppError("Too many failed attempts. Please request a new verification code.", 429);
+        }
+
+        const storedHashedOtp = await this.cacheRepository.get(`login_otp:${normalizedEmail}`);
+        if (!storedHashedOtp) {
+            throw new AppError("Verification code expired or invalid", 400);
+        }
+
+        const inputHashedOtp = this._hashValue(inputOtp);
+        if (inputHashedOtp !== storedHashedOtp) {
+            await this.cacheRepository.set(attemptsKey, Number(attempts) + 1, 300);
+            throw new AppError("Invalid verification code", 400);
+        }
+
+        const user = await this.userRepository.findUserByEmail(normalizedEmail);
+        if (!user) throw new AppError("User not found", 404);
+
+        await this.cacheRepository.del(`login_otp:${normalizedEmail}`);
+        await this.cacheRepository.del(attemptsKey);
+        await this.cacheRepository.del(`login_otp_cooldown:${normalizedEmail}`);
+
+        if (!user.isVerified) {
+            await this.userRepository.updateUser(user._id, { isVerified: true });
+            await this.cacheRepository.del(`user:id:${user._id}`);
+            await this.cacheRepository.del(`user:email:${normalizedEmail}`);
+        }
+
+        const userWithRole = await this.userRepository.findUserById(user._id);
+        if (!userWithRole) throw new AppError("Failed to authenticate user", 500);
+
+        const safeUser = this._getSafeUserPayload(userWithRole);
+
+        const jwtPayload = {
+            id: safeUser._id,
+            email: safeUser.email,
+            name: safeUser.name,
+            role: safeUser?.role?.name,
+            isVerified: true,
+        };
+
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
+        const refreshToken = jwt.sign({ id: userWithRole._id }, REFRESH_SECRET, {
+            expiresIn: REFRESH_EXPIRES_IN,
+        });
+
+        await this.saveRefreshToken(userWithRole._id, refreshToken);
+
+        return {
+            user: safeUser,
+            token,
+            refreshToken,
+            message: "Login successful!",
+        };
+    }
+
+    async resendLoginOtp({ email }) {
         if (!email) throw new AppError("Email is required", 400);
         const normalizedEmail = email.toLowerCase().trim();
         const user = await this.userRepository.findUserByEmail(normalizedEmail);
 
         if (!user) {
-            return { message: "If the account exists, a password reset code has been sent." };
+            return { message: "If an account exists, a new verification code has been sent." };
+        }
+
+        const cooldownKey = `login_otp_cooldown:${normalizedEmail}`;
+        const isCooldown = await this.cacheRepository.get(cooldownKey);
+        if (isCooldown) {
+            throw new AppError("Please wait before requesting another verification code", 429);
+        }
+
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const hashedOtp = this._hashValue(otp);
+
+        await this.cacheRepository.set(`login_otp:${normalizedEmail}`, hashedOtp, 300);
+        await this.cacheRepository.set(`login_otp_attempts:${normalizedEmail}`, 0, 300);
+        await this.cacheRepository.set(cooldownKey, "1", 60);
+
+        await sendVerificationEmail({
+            to: normalizedEmail,
+            name: user.name,
+            otp,
+            type: "login",
+        });
+
+        return { message: "A new verification code has been sent to your email." };
+    }
+
+    async forgotPassword({ email }) {
+        if (!email) throw new AppError("Email is required", 400);
+        const normalizedEmail = email.toLowerCase().trim();
+        const genericMessage = "If an account exists for this email, a verification code has been sent.";
+
+        const user = await this.userRepository.findUserByEmail(normalizedEmail);
+        if (!user) {
+            return { message: genericMessage };
         }
 
         const cooldownKey = `password_reset_resend:${normalizedEmail}`;
         const isCooldown = await this.cacheRepository.get(cooldownKey);
         if (isCooldown) {
-            return { message: "If the account exists, a password reset code has been sent." };
+            return { message: genericMessage };
         }
 
         const otp = crypto.randomInt(100000, 999999).toString();
@@ -219,10 +374,10 @@ class UserService {
         try {
             await sendPasswordResetEmail({ to: normalizedEmail, name: user.name, otp });
         } catch (error) {
-            logger.error(`Failed to send password reset email to ${normalizedEmail}:`, error);
+            logger.warn(`Failed to send password reset email to ${normalizedEmail}: ${error.message}`);
         }
 
-        return { message: "If the account exists, a password reset code has been sent." };
+        return { message: genericMessage };
     }
 
     async resendResetOtp({ email }) {
@@ -235,9 +390,10 @@ class UserService {
             throw new AppError("Email and OTP are required", 400);
         }
         const normalizedEmail = email.toLowerCase().trim();
+        const inputOtp = otp.toString().trim();
+
         const attemptsKey = `password_reset_attempts:${normalizedEmail}`;
         const attempts = (await this.cacheRepository.get(attemptsKey)) || 0;
-
         if (Number(attempts) >= 5) {
             throw new AppError("Too many failed attempts. Please request a new password reset code.", 429);
         }
@@ -247,7 +403,7 @@ class UserService {
             throw new AppError("Reset code expired or invalid", 400);
         }
 
-        const inputHashedOtp = this._hashValue(otp.toString().trim());
+        const inputHashedOtp = this._hashValue(inputOtp);
         if (inputHashedOtp !== storedHashedOtp) {
             await this.cacheRepository.set(attemptsKey, Number(attempts) + 1, 300);
             throw new AppError("Invalid reset code", 400);
@@ -292,48 +448,7 @@ class UserService {
         await this.cacheRepository.del(`user:id:${user._id}`);
         await this.cacheRepository.del(`user:email:${normalizedEmail}`);
 
-        return { message: "Password reset successfully" };
-    }
-
-    async login({ email, password }) {
-        if (!email || !password) {
-            throw new AppError("Invalid credentials", 401);
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        const user = await this.userRepository.findUserByEmail(normalizedEmail);
-
-        if (!user || !user.password) {
-            throw new AppError("Invalid credentials", 401);
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) throw new AppError("Invalid credentials", 401);
-
-        const userWithRole = await this.userRepository.findUserById(user._id);
-        if (!userWithRole) throw new AppError("Failed to authenticate user", 500);
-
-        const safeUser = this._getSafeUserPayload(userWithRole);
-
-        const jwtPayload = {
-            id: safeUser._id,
-            email: safeUser.email,
-            name: safeUser.name,
-            role: safeUser?.role?.name,
-            isVerified: safeUser?.isVerified,
-        };
-
-        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
-        const refreshToken = jwt.sign({ id: userWithRole._id }, REFRESH_SECRET, {
-            expiresIn: REFRESH_EXPIRES_IN,
-        });
-        await this.saveRefreshToken(userWithRole._id, refreshToken);
-
-        return {
-            user: safeUser,
-            token,
-            refreshToken,
-        };
+        return { message: "Password reset successfully. Please sign in." };
     }
 
     async googleAuth({ idToken }) {
@@ -357,7 +472,8 @@ class UserService {
         }
 
         if (GOOGLE_ID && googlePayload.aud !== GOOGLE_ID) {
-            logger.warn(`Google client ID mismatch: received ${googlePayload.aud}`);
+            logger.error(`Google client ID mismatch: received ${googlePayload.aud}`);
+            throw new AppError("Unauthorized: Google Client ID mismatch", 401);
         }
 
         const googleId = googlePayload.sub;
@@ -609,45 +725,43 @@ class UserService {
         }
 
         let successCount = 0;
+        const validUsers = users.filter((u) => u.email);
 
-    
-        try {
-            await Promise.all(
-                users.map(async (user) => {
-                    if (!user.email) return;
+        const apiKey = config.BREVO_API_KEY;
+        const senderEmail = config.BREVO_SENDER_MAIL || "aakashredon@gmail.com";
+        const senderName = config.BREVO_SENDER_NAME || "Web3Wave";
 
-                    await emailQueue.add(
-                        "blast-mail",
-                        {
-                            email: user.email,
-                            name: user.name,
-                            subject,
-                            message,
-                        },
-                        {
-                            attempts: 3,
-                            backoff: {
-                                type: "exponential",
-                                delay: 5000,
+        await Promise.all(
+            validUsers.map(async (user) => {
+                try {
+                    if (apiKey) {
+                        await fetch("https://api.brevo.com/v3/smtp/email", {
+                            method: "POST",
+                            headers: {
+                                accept: "application/json",
+                                "api-key": apiKey,
+                                "content-type": "application/json",
                             },
-                            removeOnComplete: true,
-                            removeOnFail: false,
-                        }
-                    );
-
+                            body: JSON.stringify({
+                                sender: { name: senderName, email: senderEmail },
+                                to: [{ email: user.email, name: user.name || user.email.split("@")[0] }],
+                                subject,
+                                htmlContent: `<div><p>Hello ${user.name || "Builder"},</p><p>${message}</p></div>`,
+                            }),
+                        });
+                    }
                     successCount++;
-                })
-            );
+                } catch (error) {
+                    logger.error(`Failed sending blast email to ${user.email}:`, error);
+                }
+            })
+        );
 
-            logger.info(`Blast queued for ${successCount} users`);
+        logger.info(`Blast processed for ${successCount} users`);
 
-            return {
-                message: `Blast queued for ${successCount} users.`,
-            };
-        } catch (error) {
-            logger.error("Blast queue failed", error);
-            throw new AppError("Failed to queue blast emails", 500);
-        }
+        return {
+            message: `Blast sent successfully to ${successCount} users.`,
+        };
     }
 
 }

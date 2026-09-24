@@ -37,8 +37,11 @@ type MemberTab =
 import { useAuth } from "@/src/context/AuthContext";
 
 export default function MembersPage() {
-  const { user, loginUser, registerUser, logoutUser, isLoading } = useAuth();
-  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const { user, loginUser, verifyLoginOtp, resendLoginOtp, registerUser, verifyEmail, resendVerification, logoutUser, isLoading } = useAuth();
+  const [authMode, setAuthMode] = useState<"login" | "register" | "verify_otp">("login");
+  const [isLoginOtp, setIsLoginOtp] = useState(true);
+  const [memberOtp, setMemberOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [activeTab, setActiveTab] = useState<MemberTab>("discover");
   const [memberName, setMemberName] = useState("");
   const [memberEmail, setMemberEmail] = useState("");
@@ -72,12 +75,14 @@ export default function MembersPage() {
 
       setIsSubmitting(true);
       try {
-        await registerUser({
+        const res = await registerUser({
           name: memberName,
           email: memberEmail,
           number: memberMobile,
           password: memberPassword,
         });
+        setIsLoginOtp(false);
+        setAuthMode("verify_otp");
       } catch (err: any) {
         setErrorMsg(err.message || "Registration failed.");
       } finally {
@@ -86,15 +91,72 @@ export default function MembersPage() {
     } else {
       setIsSubmitting(true);
       try {
-        await loginUser({
+        const res = await loginUser({
           email: memberEmail,
           password: memberPassword,
         });
+        if (res?.requiresOtp) {
+          setIsLoginOtp(true);
+          setAuthMode("verify_otp");
+        }
       } catch (err: any) {
-        setErrorMsg(err.message || "Invalid email or password.");
+        if (err.message?.toLowerCase().includes("verify your email")) {
+          setErrorMsg(err.message);
+          setIsLoginOtp(false);
+          setAuthMode("verify_otp");
+        } else {
+          setErrorMsg(err.message || "Invalid email or password.");
+        }
       } finally {
         setIsSubmitting(false);
       }
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!memberOtp || memberOtp.trim().length !== 6) {
+      setErrorMsg("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (isLoginOtp) {
+        await verifyLoginOtp(memberEmail, memberOtp.trim());
+      } else {
+        await verifyEmail(memberEmail, memberOtp.trim());
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to verify OTP.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendMemberOtp = async () => {
+    if (resendCooldown > 0) return;
+    setErrorMsg("");
+    try {
+      if (isLoginOtp) {
+        await resendLoginOtp(memberEmail);
+      } else {
+        await resendVerification(memberEmail);
+      }
+      setResendCooldown(60);
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to resend code.");
     }
   };
 
@@ -174,6 +236,57 @@ export default function MembersPage() {
               </div>
             )}
 
+            {authMode === "verify_otp" ? (
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono font-bold text-zinc-400 uppercase mb-1.5">
+                    6-Digit Verification Code *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={memberOtp}
+                    onChange={(e) => setMemberOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="000000"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-lg font-mono text-white placeholder-zinc-600 focus:outline-none focus:border-rose-500 transition-colors"
+                  />
+                  <p className="text-[11px] font-mono text-zinc-500 mt-1">
+                    Check your inbox at {memberEmail} for the 6-digit code.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || memberOtp.length !== 6}
+                  className="w-full btn-luma-accent py-3.5 text-sm font-bold justify-center mt-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>{isSubmitting ? "Verifying..." : "Verify & Enter Dashboard"}</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                <div className="pt-2 flex items-center justify-between text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={handleResendMemberOtp}
+                    disabled={resendCooldown > 0}
+                    className="text-zinc-400 hover:text-rose-400 transition-colors disabled:text-zinc-600"
+                  >
+                    {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend Code"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setErrorMsg("");
+                    }}
+                    className="text-rose-400 hover:underline"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono font-bold text-zinc-400 uppercase mb-1.5">
@@ -280,6 +393,7 @@ export default function MembersPage() {
                 <ChevronRight className="w-4 h-4" />
               </button>
             </form>
+            )}
 
             <div className="mt-6 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-zinc-500 font-mono">
               <span>Hosting an event or hiring?</span>

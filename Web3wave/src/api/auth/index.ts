@@ -8,6 +8,7 @@ import {
   RegisterCompanyRequest,
   LoginCompanyRequest,
   ApiResponse,
+  LoginResponseData,
   User,
   CompanyUser,
 } from "./types";
@@ -15,15 +16,29 @@ import {
 // User Auth Services
 export async function registerUserApi(
   payload: RegisterUserRequest
-): Promise<ApiResponse<{ user: User; token?: string; message?: string }>> {
+): Promise<ApiResponse<{ user?: User; token?: string; message?: string; requiresOtp?: boolean }>> {
   const response = await api.post("/auth/register", payload);
   return response.data;
 }
 
 export async function loginUserApi(
   payload: LoginUserRequest
-): Promise<ApiResponse<{ user: User; token?: string }>> {
+): Promise<ApiResponse<LoginResponseData>> {
   const response = await api.post("/auth/login", payload);
+  return response.data;
+}
+
+export async function verifyLoginOtpApi(
+  payload: VerifyEmailRequest
+): Promise<ApiResponse<{ user: User; token: string; refreshToken?: string }>> {
+  const response = await api.post("/auth/verify-login-otp", payload);
+  return response.data;
+}
+
+export async function resendLoginOtpApi(
+  payload: ResendOtpRequest
+): Promise<ApiResponse> {
+  const response = await api.post("/auth/resend-login-otp", payload);
   return response.data;
 }
 
@@ -36,7 +51,7 @@ export async function googleAuthApi(
 
 export async function verifyEmailApi(
   payload: VerifyEmailRequest
-): Promise<ApiResponse> {
+): Promise<ApiResponse<{ user?: User; token?: string }>> {
   const response = await api.post("/auth/verify-email", payload);
   return response.data;
 }
@@ -61,15 +76,52 @@ export async function logoutUserApi(): Promise<ApiResponse> {
 // Company Auth Services
 export async function registerCompanyApi(
   payload: RegisterCompanyRequest
-): Promise<ApiResponse<{ company?: CompanyUser; token?: string }>> {
-  const response = await api.post("/company/auth/register", payload);
+): Promise<ApiResponse<{ company?: CompanyUser; token?: string; message?: string; requiresOtp?: boolean }>> {
+  const normalized = {
+    ...payload,
+    phone: payload.phone || payload.number,
+  };
+  const response = await api.post("/company/auth/register", normalized);
   return response.data;
 }
 
 export async function loginCompanyApi(
   payload: LoginCompanyRequest
-): Promise<ApiResponse<{ company?: CompanyUser; token?: string }>> {
+): Promise<ApiResponse<LoginResponseData>> {
   const response = await api.post("/company/auth/login", payload);
+  return response.data;
+}
+
+export async function verifyCompanyLoginOtpApi(
+  payload: VerifyEmailRequest
+): Promise<ApiResponse<{ company: CompanyUser; token: string; refreshToken?: string }>> {
+  const response = await api.post("/company/auth/verify-login-otp", payload);
+  return response.data;
+}
+
+export async function resendCompanyLoginOtpApi(
+  payload: ResendOtpRequest
+): Promise<ApiResponse> {
+  const response = await api.post("/company/auth/resend-login-otp", payload);
+  return response.data;
+}
+
+export async function getCompanyMeApi(): Promise<ApiResponse<CompanyUser>> {
+  const response = await api.get("/company/auth/me");
+  return response.data;
+}
+
+export async function verifyCompanyEmailApi(
+  payload: VerifyEmailRequest
+): Promise<ApiResponse<{ company?: CompanyUser; token?: string }>> {
+  const response = await api.post("/company/auth/verify-email", payload);
+  return response.data;
+}
+
+export async function resendCompanyVerificationApi(
+  payload: ResendOtpRequest
+): Promise<ApiResponse> {
+  const response = await api.post("/company/auth/resend-verification", payload);
   return response.data;
 }
 

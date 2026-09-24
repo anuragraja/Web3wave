@@ -4,6 +4,10 @@ import User from "../../models/user.model.js";
 import { AppError } from "../../utils/appError.js";
 import { paginateAggregation } from "../../utils/pagination.js";
 
+function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 class MongoUserRepository extends IUserRepository {
     async createUser(userData) {
         try {
@@ -107,24 +111,17 @@ class MongoUserRepository extends IUserRepository {
 
     async findAllUsers(page = 1, limit = 10, search = "") {
         try {
+            const cleanSearch = escapeRegex(search.trim());
+            const regex = cleanSearch ? new RegExp(cleanSearch, "i") : null;
             const pipeline = [
-                
-                ...(search
+                ...(regex
                     ? [
                         {
                             $match: {
                                 $or: [
-                                    { firstName: { $regex: search, $options: "i" } },
-                                    { lastName: { $regex: search, $options: "i" } },
-                                    {
-                                        $expr: {
-                                            $regexMatch: {
-                                                input: { $concat: ["$name"] },
-                                                regex: search,
-                                                options: "i",
-                                            },
-                                        },
-                                    },
+                                    { name: regex },
+                                    { email: regex },
+                                    { number: regex },
                                 ],
                             },
                         },
@@ -252,7 +249,8 @@ class MongoUserRepository extends IUserRepository {
         const searchQuery = query.trim();
         if (!searchQuery) return [];
 
-        const regex = new RegExp(searchQuery, "i");
+        const cleanSearch = escapeRegex(searchQuery);
+        const regex = new RegExp(cleanSearch, "i");
 
         try {
             const users = await User.aggregate([
@@ -260,17 +258,8 @@ class MongoUserRepository extends IUserRepository {
                     $match: {
                         $or: [
                             { email: regex },
-                            { firstName: regex },
-                            { lastName: regex },
-                            {
-                                $expr: {
-                                    $regexMatch: {
-                                        input: { $concat: ["$firstName", " ", "$lastName"] },
-                                        regex: searchQuery,
-                                        options: "i",
-                                    },
-                                },
-                            },
+                            { name: regex },
+                            { number: regex },
                         ],
                     },
                 },

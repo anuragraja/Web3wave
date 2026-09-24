@@ -11,15 +11,22 @@ const registerCompanySchema = Joi.object({
         "string.email": "A valid company email address is required",
         "any.required": "Company email is required",
     }),
-    phone: Joi.string().min(7).max(20).required().messages({
+    phone: Joi.string().min(7).max(20).messages({
         "string.min": "Phone number must be at least 7 characters long",
         "string.max": "Phone number cannot exceed 20 characters",
-        "any.required": "Phone number is required",
     }),
+    number: Joi.string().min(7).max(20).messages({
+        "string.min": "Phone number must be at least 7 characters long",
+        "string.max": "Phone number cannot exceed 20 characters",
+    }),
+    website: Joi.string().allow("", null),
+    role: Joi.string().allow("", null),
     password: Joi.string().min(6).required().messages({
         "string.min": "Password must be at least 6 characters long",
         "any.required": "Password is required",
     }),
+}).or("phone", "number").messages({
+    "object.missing": "Phone number is required",
 });
 
 const loginCompanySchema = Joi.object({
@@ -85,6 +92,9 @@ const confirmCompanyResetPasswordSchema = Joi.object({
 });
 
 const validate = (schema) => (req, _res, next) => {
+    if (req.body && !req.body.phone && req.body.number) {
+        req.body.phone = req.body.number;
+    }
     const { error, value } = schema.validate(req.body, {
         abortEarly: false,
         stripUnknown: true,
@@ -95,6 +105,9 @@ const validate = (schema) => (req, _res, next) => {
         );
     }
     req.body = value;
+    if (!req.body.phone && req.body.number) {
+        req.body.phone = req.body.number;
+    }
     next();
 };
 
@@ -105,3 +118,6 @@ export const resendCompanyVerificationValidator = validate(resendCompanyVerifica
 export const forgotCompanyPasswordValidator = validate(forgotCompanyPasswordSchema);
 export const verifyCompanyResetOtpValidator = validate(verifyCompanyResetOtpSchema);
 export const confirmCompanyResetPasswordValidator = validate(confirmCompanyResetPasswordSchema);
+export const verifyCompanyLoginOtpValidator = validate(verifyCompanyEmailSchema);
+export const resendCompanyLoginOtpValidator = validate(resendCompanyVerificationSchema);
+

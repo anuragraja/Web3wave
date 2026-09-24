@@ -118,3 +118,6 @@ export const resendOtpValidator = validate(resendOtpSchema);
 export const forgotPasswordValidator = validate(forgotPasswordSchema);
 export const verifyResetOtpValidator = validate(verifyResetOtpSchema);
 export const confirmResetPasswordValidator = validate(confirmResetPasswordSchema);
+export const verifyLoginOtpValidator = validate(verifyEmailSchema);
+export const resendLoginOtpValidator = validate(resendOtpSchema);
+

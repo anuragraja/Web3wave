@@ -13,7 +13,7 @@ export const authRateLimiter = rateLimit({
 
 export const sensitiveAuthRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: process.env.NODE_ENV === "test" ? 1000 : 50,
     standardHeaders: true,
     legacyHeaders: false,
     message: {

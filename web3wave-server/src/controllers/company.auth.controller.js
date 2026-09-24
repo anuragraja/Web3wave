@@ -1,11 +1,24 @@
 import CompanyAuthService from "../services/company.auth.service.js";
+import config from "../config/environment.js";
 
 const companyAuthService = new CompanyAuthService();
+
+const isProduction = config.NODE_ENV === "production";
+const getCookieOptions = (maxAge) => ({
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    ...(maxAge ? { maxAge } : {}),
+});
 
 export async function register(req, res, next) {
     try {
         const result = await companyAuthService.register(req.body);
-        return res.status(201).json({ success: true, ...result });
+        if (result.token) {
+            res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+        }
+        return res.status(201).json({ success: true, data: result, ...result });
     } catch (error) {
         next(error);
     }
@@ -17,7 +30,11 @@ export async function verifyEmail(req, res, next) {
             email: req.body.email,
             otp: req.body.otp,
         });
-        return res.status(200).json({ success: true, ...result });
+        if (result.token) {
+            res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+        }
+        return res.status(200).json({ success: true, data: result, ...result });
     } catch (error) {
         next(error);
     }
@@ -39,21 +56,65 @@ export async function login(req, res, next) {
             password: req.body.password,
         });
 
-        res.cookie("token", result.token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: 24 * 60 * 60 * 1000,
+        if (result.token) {
+            res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+        }
+
+        return res.status(200).json({ success: true, data: result, ...result });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function verifyLoginOtp(req, res, next) {
+    try {
+        const result = await companyAuthService.verifyLoginOtp({
+            email: req.body.email,
+            otp: req.body.otp,
         });
 
-        res.cookie("refreshToken", result.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+        if (result.token) {
+            res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+        }
 
-        return res.status(200).json({ success: true, data: result });
+        return res.status(200).json({ success: true, data: result, ...result });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function resendLoginOtp(req, res, next) {
+    try {
+        const result = await companyAuthService.resendLoginOtp(req.body.email);
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function getMe(req, res, next) {
+    try {
+        const companyId = req.companyId;
+        if (!companyId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+        const company = await companyAuthService.companyRepository.findCompanyById(companyId);
+        if (!company) {
+            return res.status(404).json({ success: false, message: "Company not found" });
+        }
+        return res.status(200).json({
+            success: true,
+            data: {
+                id: company._id,
+                companyName: company.companyName,
+                email: company.email,
+                phone: company.phone,
+                role: "company",
+                isVerified: company.isVerified,
+            },
+        });
     } catch (error) {
         next(error);
     }
@@ -98,19 +159,8 @@ export async function refreshToken(req, res, next) {
         const token = req.cookies?.refreshToken || req.body?.refreshToken;
         const result = await companyAuthService.refresh(token);
 
-        res.cookie("token", result.token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: 24 * 60 * 60 * 1000,
-        });
-
-        res.cookie("refreshToken", result.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
+        res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+        res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
 
         return res.status(200).json({ success: true, data: result });
     } catch (error) {
@@ -126,17 +176,14 @@ export async function logout(req, res, next) {
 
         await companyAuthService.logout(token);
 
-        res.clearCookie("token", {
+        const clearOptions = {
             httpOnly: true,
-            secure: true,
-            sameSite: "none",
-        });
+            secure: isProduction,
+            sameSite: isProduction ? "none" : "lax",
+        };
 
-        res.clearCookie("refreshToken", {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-        });
+        res.clearCookie("token", clearOptions);
+        res.clearCookie("refreshToken", clearOptions);
 
         return res
             .status(200)

@@ -2,6 +2,16 @@ import UserService from "../services/user.service.js";
 import { AppError } from "../utils/appError.js";
 import AuthService from "../services/auth.service.js";
 import { redisClient } from "../config/redis.js";
+import config from "../config/environment.js";
+import jwt from "jsonwebtoken";
+
+const isProduction = config.NODE_ENV === "production";
+const getCookieOptions = (maxAge) => ({
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    ...(maxAge ? { maxAge } : {}),
+});
 
 class AuthController {
     constructor() {
@@ -16,19 +26,8 @@ class AuthController {
 
             const tokens = await this.userService.refresh(refreshToken);
 
-            res.cookie("token", tokens.token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 24 * 60 * 60 * 1000,
-            });
-
-            res.cookie("refreshToken", tokens.refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
+            res.cookie("token", tokens.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", tokens.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
 
             res.status(200).json({ success: true, data: tokens });
         } catch (err) {
@@ -40,21 +39,12 @@ class AuthController {
         try {
             const userData = req.body;
             const result = await this.userService.register(userData);
-            res.cookie("token", result.token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 24 * 60 * 60 * 1000,
-            });
+            if (result.token) {
+                res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+                res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+            }
 
-            res.cookie("refreshToken", result.refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
-
-            res.status(201).json({ success: true, data: result });
+            res.status(201).json({ success: true, data: result, ...result });
         } catch (error) {
             next(error);
         }
@@ -64,21 +54,12 @@ class AuthController {
         try {
             const { email, password } = req.body;
             const result = await this.userService.login({ email, password });
-            res.cookie("token", result.token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 24 * 60 * 60 * 1000,
-            });
+            if (result.token) {
+                res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+                res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+            }
 
-            res.cookie("refreshToken", result.refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
-
-            res.status(200).json({ success: true, data: result });
+            res.status(200).json({ success: true, data: result, ...result });
         } catch (error) {
             next(error);
         }
@@ -88,19 +69,8 @@ class AuthController {
         try {
             const { idToken } = req.body;
             const result = await this.userService.googleAuth({ idToken });
-            res.cookie("token", result.token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 24 * 60 * 60 * 1000,
-            });
-
-            res.cookie("refreshToken", result.refreshToken, {
-                httpOnly: true,
-                secure: true,
-                sameSite: "none",
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            });
+            res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+            res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
 
             res.status(200).json({ success: true, data: result });
         } catch (error) {
@@ -134,21 +104,45 @@ class AuthController {
             const token =
                 req.cookies?.token ||
                 req.header("Authorization")?.replace("Bearer ", "");
+            const refreshToken =
+                req.cookies?.refreshToken || req.body?.refreshToken;
 
             if (token) {
-                const decoded = this.authService.verifyToken(token);
-                const exp = decoded.exp * 1000;
-                const ttl = Math.floor((exp - Date.now()) / 1000);
-                if (ttl > 0) {
-                    await redisClient.setEx(`bl_${token}`, ttl, "blacklisted");
+                try {
+                    const decoded = this.authService.verifyToken(token);
+                    const exp = decoded.exp * 1000;
+                    const ttl = Math.floor((exp - Date.now()) / 1000);
+                    if (ttl > 0) {
+                        await redisClient.setEx(`bl_${token}`, ttl, "blacklisted");
+                    }
+                    const userId = decoded.id || decoded.userId;
+                    if (userId) {
+                        await redisClient.del(`refresh:${userId}`);
+                    }
+                } catch {
+                    // Ignore expired or invalid token during logout
                 }
             }
 
-            res.clearCookie("token", {
+            if (refreshToken) {
+                try {
+                    const decodedRefresh = jwt.verify(refreshToken, config.REFRESH_SECRET);
+                    if (decodedRefresh?.id) {
+                        await redisClient.del(`refresh:${decodedRefresh.id}`);
+                    }
+                } catch {
+                    // Ignore invalid refresh token during logout
+                }
+            }
+
+            const clearOptions = {
                 httpOnly: true,
-                secure: true,
-                sameSite: "none",
-            });
+                secure: isProduction,
+                sameSite: isProduction ? "none" : "lax",
+            };
+
+            res.clearCookie("token", clearOptions);
+            res.clearCookie("refreshToken", clearOptions);
 
             res
                 .status(200)
@@ -194,6 +188,34 @@ class AuthController {
         try {
             const { email, otp } = req.body;
             const result = await this.userService.verifyEmail({ email, otp });
+            if (result.token) {
+                res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+                res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+            }
+            res.status(200).json({ success: true, data: result, ...result });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    verifyLoginOtp = async (req, res, next) => {
+        try {
+            const { email, otp } = req.body;
+            const result = await this.userService.verifyLoginOtp({ email, otp });
+            if (result.token) {
+                res.cookie("token", result.token, getCookieOptions(24 * 60 * 60 * 1000));
+                res.cookie("refreshToken", result.refreshToken, getCookieOptions(7 * 24 * 60 * 60 * 1000));
+            }
+            res.status(200).json({ success: true, data: result, ...result });
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    resendLoginOtp = async (req, res, next) => {
+        try {
+            const { email } = req.body;
+            const result = await this.userService.resendLoginOtp({ email });
             res.status(200).json({ success: true, ...result });
         } catch (error) {
             next(error);

@@ -10,6 +10,8 @@ import {
     forgotPasswordValidator,
     verifyResetOtpValidator,
     confirmResetPasswordValidator,
+    verifyLoginOtpValidator,
+    resendLoginOtpValidator,
 } from "../middlewares/validators/auth.validator.js";
 import { authenticateJWT } from "../middlewares/auth.middleware.js";
 import {
@@ -21,6 +23,8 @@ const router = express.Router();
 
 router.post("/register", sensitiveAuthRateLimiter, registerValidator, authController.register);
 router.post("/login", sensitiveAuthRateLimiter, loginValidator, authController.login);
+router.post("/verify-login-otp", sensitiveAuthRateLimiter, verifyLoginOtpValidator, authController.verifyLoginOtp);
+router.post("/resend-login-otp", sensitiveAuthRateLimiter, resendLoginOtpValidator, authController.resendLoginOtp);
 router.post("/google", sensitiveAuthRateLimiter, googleAuthValidator, authController.googleAuth);
 router.post("/refresh", authRateLimiter, authController.refreshTokenController);
 router.post("/logout", authRateLimiter, authController.logout);

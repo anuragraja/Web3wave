@@ -6,7 +6,12 @@ class RedisCacheRepository extends ICacheRepository {
     async get(key) {
         try {
             const data = await redisClient.get(key);
-            return data ? JSON.parse(data) : null;
+            if (!data) return null;
+            try {
+                return JSON.parse(data);
+            } catch {
+                return data;
+            }
         } catch (error) {
             throw new AppError("Failed to get cache", 500, error);
         }
