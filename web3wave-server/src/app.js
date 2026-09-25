@@ -24,6 +24,7 @@ app.use(
             if (!origin) return callback(null, true);
             const normalizedOrigin = origin.replace(/\/$/, "");
             if (
+                allowedOrigins.includes("*") ||
                 allowedOrigins.includes(normalizedOrigin) ||
                 (config.NODE_ENV !== "production" &&
                     (normalizedOrigin.includes("localhost") || normalizedOrigin.includes("127.0.0.1")))

@@ -135,7 +135,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
     try {
       const googleClientId =
         process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-        "154081892000-2kjp3cijoi81ivd44auo92aiavuto690.apps.googleusercontent.com";
+        "205620553440-ttv58ga9fgch2nba8nv727erilfpgk0d.apps.googleusercontent.com";
 
       const idToken = await openGoogleOAuthPopup(googleClientId, popupWindow);
 
