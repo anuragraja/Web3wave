@@ -81,42 +81,42 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, i
 
           {/* Nav Links (Desktop) */}
           <nav aria-label="Main navigation" className="hidden md:flex items-center gap-1 bg-white/[0.04] border border-white/10 rounded-full px-3 py-1.5 backdrop-blur-md">
-            <a
+            <Link
               href="/about"
               className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
             >
               About
-            </a>
-            <a
+            </Link>
+            <Link
               href="/events"
               className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
             >
               Events
-            </a>
-            <a
+            </Link>
+            {/* <Link
               href="/companies"
               className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
             >
               Companies
-            </a>
+            </Link> */}
             
             {/* Members button removed from Admin Navigation */}
-            {!hideAdminItems && (
-              <a
+            {/* {!hideAdminItems && (
+              <Link
                 href="/members"
                 className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
               >
                 Members
-              </a>
-            )}
+              </Link>
+            )} */}
 
-            <a
+            <Link
               href="/gallery"
               className="text-xs font-semibold text-rose-300 hover:text-white px-3 py-1 rounded-full hover:bg-rose-500/20 transition-all flex items-center gap-1"
             >
               <span>Gallery</span>
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-            </a>
+            </Link>
 
             {/* Admin Dashboard Link (Only visible to Admin) */}
             {isAdmin && (
@@ -228,45 +228,45 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, i
               </Link>
             )}
 
-            <a
+            <Link
               href="/about"
               onClick={() => setMobileMenuOpen(false)}
               className="text-base font-bold text-white py-2 border-b border-white/5"
             >
               About Us
-            </a>
-            <a
+            </Link>
+            <Link
               href="/events"
               onClick={() => setMobileMenuOpen(false)}
               className="text-base font-bold text-white py-2 border-b border-white/5"
             >
               Explore Events
-            </a>
-            <a
+            </Link>
+            <Link
               href="/companies"
               onClick={() => setMobileMenuOpen(false)}
               className="text-base font-bold text-white py-2 border-b border-white/5"
             >
               Companies Portal
-            </a>
+            </Link>
             
             {!hideAdminItems && (
-              <a
+              <Link
                 href="/members"
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-base font-bold text-white py-2 border-b border-white/5"
               >
                 Members Portal
-              </a>
+              </Link>
             )}
 
-            <a
+            <Link
               href="/gallery"
               onClick={() => setMobileMenuOpen(false)}
               className="text-base font-bold text-rose-300 py-2 border-b border-white/5"
             >
               Builder Gallery
-            </a>
+            </Link>
 
             <div className="flex flex-col gap-2 pt-2">
               {isAdmin && (

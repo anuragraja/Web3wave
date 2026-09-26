@@ -1,45 +1,34 @@
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, Flame, Image as ImageIcon, ArrowRight } from "lucide-react";
-import ScrollMorphHero from "@/components/ui/scroll-morph-hero";
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { Flame, ArrowRight } from 'lucide-react'
+import ScrollMorphHero from '@/components/ui/scroll-morph-hero'
+import { LumaNav } from '@/components/LumaNav'
+import { useAuth } from '@/src/context/AuthContext'
+import { isUserAdmin } from '@/src/utils/eventUtils'
+
+const LumaCreateEventModal = dynamic(() => import('@/components/LumaCreateEventModal').then(mod => mod.LumaCreateEventModal))
+const LumaSubscribeModal = dynamic(() => import('@/components/LumaSubscribeModal').then(mod => mod.LumaSubscribeModal))
+const LumaAuthModal = dynamic(() => import('@/components/LumaAuthModal').then(mod => mod.LumaAuthModal))
 
 export default function GalleryPage() {
+  const { user } = useAuth()
+  const isAdmin = isUserAdmin(user)
+
+  const [createEventOpen, setCreateEventOpen] = useState(false)
+  const [subscribeOpen, setSubscribeOpen] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+
   return (
     <div className="relative min-h-screen bg-[#0a0a0d] text-white flex flex-col font-sans antialiased selection:bg-rose-500 selection:text-white">
-      {/* Fixed Header Navigation */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0d0d10]/85 backdrop-blur-xl shadow-lg shadow-black/50">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition-all group"
-          >
-            <ArrowLeft className="w-4 h-4 text-rose-400 group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back to Home</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-2 group cursor-pointer"
-          >
-            <Image
-              src="/web3wave-logo.png"
-              alt="Web3Wave Logo"
-              width={28}
-              height={28}
-              className="h-7 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] group-hover:scale-105 transition-transform"
-            />
-            <span className="text-sm font-extrabold tracking-tight text-white group-hover:text-rose-300 transition-colors">
-              Web3Wave <span className="text-rose-400 font-mono text-xs font-normal">/ Gallery</span>
-            </span>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 font-mono text-xs shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-            <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
-            <span>BUILDER ARCHIVE</span>
-          </div>
-        </div>
-      </header>
+      {/* Top Header Navigation */}
+      <LumaNav
+        onOpenSubscribe={() => setSubscribeOpen(true)}
+        onOpenCreateEvent={() => setCreateEventOpen(true)}
+        onOpenAuthModal={() => setAuthOpen(true)}
+      />
 
       {/* Main Native Scroll Track */}
       <main className="relative w-full pt-16">
@@ -67,6 +56,25 @@ export default function GalleryPage() {
           </Link>
         </div>
       </footer>
+
+      {/* Modals Integration */}
+      {isAdmin && (
+        <LumaCreateEventModal
+          isOpen={createEventOpen}
+          onClose={() => setCreateEventOpen(false)}
+        />
+      )}
+
+      <LumaSubscribeModal
+        isOpen={subscribeOpen}
+        onClose={() => setSubscribeOpen(false)}
+      />
+
+      <LumaAuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+      />
     </div>
-  );
+  )
 }
+

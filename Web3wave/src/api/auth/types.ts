@@ -76,6 +76,7 @@ export interface RegisterCompanyRequest {
   phone?: string;
   website?: string;
   role?: string;
+  designation?: string;
   password: string;
 }
 

@@ -173,13 +173,22 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
           setSuccessMsg("Verification code sent to your email!");
           setMode("verify_email");
         } else {
+          if (!website.trim()) {
+            setErrorMsg("Please enter your company website / protocol link.");
+            return;
+          }
+          if (!companyRole.trim()) {
+            setErrorMsg("Please enter your designation / role.");
+            return;
+          }
           const res = await registerCompany({
             companyName: name,
             email,
             phone: mobile,
             number: mobile,
-            website: website || "https://web3wave.in",
-            role: companyRole || "Sponsor",
+            website: website.trim(),
+            role: companyRole.trim(),
+            designation: companyRole.trim(),
             password,
           });
           setIsLoginOtp(false);
@@ -602,7 +611,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
               {mode === "register" && (
                 <div>
                   <label className="block text-[11px] font-mono font-bold text-zinc-400 uppercase mb-1">
-                    Mobile Number *
+                    Contact / Mobile Number *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
@@ -618,6 +627,39 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                     />
                   </div>
                 </div>
+              )}
+
+              {/* Website & Designation (Company Register Mode Only) */}
+              {mode === "register" && role === "company" && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-400 uppercase mb-1">
+                      Company Website / Protocol Link *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      placeholder="https://company.com"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-mono font-bold text-zinc-400 uppercase mb-1">
+                      Designation / Role *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={companyRole}
+                      onChange={(e) => setCompanyRole(e.target.value)}
+                      placeholder="e.g. Ecosystem Lead, Founder"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500 transition-colors"
+                    />
+                  </div>
+                </>
               )}
 
               {/* Password */}
