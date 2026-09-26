@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Calendar, MapPin, Clock, CheckCircle2, ArrowUpRight, Plus, QrCode, AlertCircle, Loader2, Upload, Image as ImageIcon } from 'lucide-react'
 import { LumaEvent } from './LumaEventGrid'
@@ -397,7 +398,7 @@ export function LumaCreateEventModal({
                     {/* Image Live Preview */}
                     {poster ? (
                       <div className="relative rounded-xl overflow-hidden max-h-36 border border-white/10 bg-black/40 flex items-center justify-center group p-1">
-                        <img src={poster} alt="Poster Preview" className="max-h-32 w-auto object-contain rounded-lg" />
+                        <Image src={poster} alt="Poster Preview" width={200} height={128} unoptimized className="max-h-32 w-auto object-contain rounded-lg" />
                         <button
                           type="button"
                           onClick={() => setPoster('')}

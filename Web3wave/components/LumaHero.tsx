@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Bell, Plus, MapPin, Users, Zap, Trophy, Rocket, Flame, ArrowRight, ShieldCheck } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam'
 import { useAuth } from '@/src/context/AuthContext'
@@ -139,9 +140,11 @@ export function LumaHero({
             <div className="flex items-start gap-6">
               {/* Mark */}
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-rose-500/30 via-purple-500/30 to-cyan-500/30 p-0.5 shadow-xl shadow-rose-500/20 shrink-0 flex items-center justify-center bg-[#121217]">
-                <img
+                <Image
                   src="/web3wave-logo.png"
                   alt="Web3Wave Logo"
+                  width={64}
+                  height={64}
                   className="w-12 sm:w-16 h-auto object-contain filter drop-shadow-[0_0_12px_rgba(59,130,246,0.5)]"
                 />
               </div>
@@ -169,20 +172,26 @@ export function LumaHero({
                 {/* Subscriber Avatars */}
                 <div className="flex items-center gap-3">
                   <div className="flex -space-x-2 overflow-hidden">
-                    <img
-                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a]"
+                    <Image
+                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a] object-cover"
                       src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
                       alt="Subscriber Avatar"
+                      width={28}
+                      height={28}
                     />
-                    <img
-                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a]"
+                    <Image
+                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a] object-cover"
                       src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
                       alt="Subscriber Avatar"
+                      width={28}
+                      height={28}
                     />
-                    <img
-                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a]"
+                    <Image
+                      className="inline-block h-7 w-7 rounded-full ring-2 ring-[#16161a] object-cover"
                       src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80"
                       alt="Subscriber Avatar"
+                      width={28}
+                      height={28}
                     />
                   </div>
                   <span className="text-xs text-zinc-400 font-medium">

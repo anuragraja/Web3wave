@@ -34,9 +34,10 @@ app.use("/api/health", healthRoutes);
 app.use("/api", (req, res, next) => {
     if (req.path === "/health" || req.path.startsWith("/health/")) return next();
     if (mongoose.connection.readyState !== 1) {
+        logger.error("Database connection failure: MONGODB_URI is disconnected or unreachable.");
         return res.status(503).json({
             success: false,
-            message: "Database is currently disconnected. Please verify your MONGODB_URI in web3wave-server/.env",
+            message: "Database service is currently unavailable. Please try again later.",
         });
     }
     next();
@@ -61,12 +62,19 @@ app.use((req, res, _next) => {
 
 app.use((err, req, res, _next) => {
     const statusCode = err.statusCode || 500;
-    const message = (err instanceof AppError)
-        ? err.message
-        : "Internal server error";
 
     if (statusCode >= 500) {
-        logger.error("Unhandled Error:", err);
+        logger.error("Server Error:", err);
+    }
+
+    let message = "Internal server error. Please try again later.";
+
+    if (err instanceof AppError && statusCode < 500) {
+        message = err.message;
+    } else if (err instanceof AppError && statusCode >= 500) {
+        // Sanitize any internal technical strings even if wrapped in AppError
+        const isTechnical = /brevo|ip|http|https|mongodb|mongoose|database|sql|redis|econnrefused|timeout|api_key|secret/i.test(err.message);
+        message = isTechnical ? "Service temporarily unavailable. Please try again later." : err.message;
     }
 
     res.status(statusCode).json({

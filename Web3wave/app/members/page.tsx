@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Users,
   Compass,
@@ -177,9 +178,11 @@ export default function MembersPage() {
             onClick={() => window.scrollTo(0, 0)}
             className="flex items-center gap-2 group cursor-pointer"
           >
-            <img
+            <Image
               src="/web3wave-logo.png"
               alt="Web3Wave Logo"
+              width={28}
+              height={28}
               className="h-7 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] group-hover:scale-105 transition-transform"
             />
             <span className="text-sm font-extrabold tracking-tight text-white group-hover:text-rose-300 transition-colors">

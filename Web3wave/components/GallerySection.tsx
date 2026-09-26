@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Maximize2, X } from 'lucide-react'
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
 
 const galleryImages = [
   {
@@ -36,8 +38,6 @@ const galleryImages = [
     span: 'col-span-1 row-span-1',
   },
 ]
-
-import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
 
 const categories = ['All', 'Conclave', 'Meetups', 'Workshops']
 
@@ -85,14 +85,17 @@ export function GallerySection() {
               onClick={() => setSelectedImage(img)}
               className={`craft-card relative overflow-hidden cursor-pointer group ${img.span}`}
             >
-              <img
+              <Image
                 src={img.src}
                 alt={img.title}
+                fill
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                quality={75}
                 loading="lazy"
                 className="w-full h-full object-cover saturate-[0.85] group-hover:saturate-[1.1] group-hover:scale-105 transition-all duration-500"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10" />
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-white z-20">
                 <div>
                   <span className="text-[10px] font-mono text-zinc-400 uppercase block">
                     {img.category}
@@ -118,18 +121,27 @@ export function GallerySection() {
             data-lenis-prevent="true"
             className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer overflow-y-auto overscroll-none"
           >
-            <div className="relative max-w-4xl w-full my-auto max-h-[85vh] overflow-y-auto overscroll-contain" data-lenis-prevent="true" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="relative max-w-4xl w-full my-auto max-h-[85vh] overflow-y-auto overscroll-contain"
+              data-lenis-prevent="true"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={() => setSelectedImage(null)}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white"
+                className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
-              <img
-                src={selectedImage.src}
-                alt={selectedImage.title}
-                className="w-full max-h-[80vh] object-contain rounded-xl border border-zinc-800"
-              />
+              <div className="relative w-full h-[60vh] sm:h-[70vh]">
+                <Image
+                  src={selectedImage.src}
+                  alt={selectedImage.title}
+                  fill
+                  sizes="100vw"
+                  quality={85}
+                  className="object-contain rounded-xl border border-zinc-800"
+                />
+              </div>
               <div className="mt-4 text-center">
                 <h3 className="text-xl font-bold text-white">{selectedImage.title}</h3>
                 <p className="text-xs font-mono text-zinc-400">{selectedImage.category}</p>

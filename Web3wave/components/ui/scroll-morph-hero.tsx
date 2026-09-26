@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import Image from "next/image";
 import { motion, useTransform, useSpring, useMotionValue, useScroll } from "framer-motion";
 
 // --- Types ---
@@ -69,11 +70,12 @@ function FlipCard({
                     className="absolute inset-0 h-full w-full overflow-hidden rounded-xl shadow-2xl bg-zinc-900 border border-white/15"
                     style={{ backfaceVisibility: "hidden" }}
                 >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                         src={src}
                         alt={`web3wave-builder-${index}`}
-                        className="h-full w-full object-cover"
+                        fill
+                        sizes="160px"
+                        className="object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 group-hover:opacity-10 transition-opacity" />
                     <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300">

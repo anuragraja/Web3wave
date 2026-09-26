@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   UserCheck,
@@ -162,9 +163,12 @@ export function MentorsSection({ onBookMentor, onApplyAsMentor }: MentorsSection
               {/* Mentor Header Avatar */}
               <div className="flex items-start justify-between">
                 <div className="relative">
-                  <img
+                  <Image
                     src={mentor.avatar}
                     alt={mentor.name}
+                    width={64}
+                    height={64}
+                    unoptimized
                     className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-500/30 group-hover:border-purple-400 transition-colors shadow-md"
                   />
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-[#121217] flex items-center justify-center text-[10px] text-white font-bold" title="Verified Mentor">

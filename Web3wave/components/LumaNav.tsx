@@ -8,6 +8,8 @@ import { Plus, Bell, Menu, X, LogIn, User, LogOut, ShieldCheck } from 'lucide-re
 import { useAuth } from '@/src/context/AuthContext'
 import { isUserAdmin } from '@/src/utils/eventUtils'
 
+import Image from 'next/image'
+
 interface LumaNavProps {
   onOpenSubscribe?: () => void
   onOpenCreateEvent?: () => void
@@ -58,9 +60,12 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, i
             className="flex items-center gap-3 group cursor-pointer"
           >
             <div className="flex items-center justify-center group-hover:scale-105 transition-transform">
-              <img
+              <Image
                 src="/web3wave-logo.png"
                 alt="Web3Wave Logo"
+                width={32}
+                height={32}
+                priority
                 className="h-8 w-auto object-contain filter drop-shadow-[0_0_10px_rgba(59,130,246,0.4)]"
               />
             </div>

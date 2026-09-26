@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   Trophy,
@@ -172,11 +173,14 @@ export function HackathonsSection({ onRegisterHackathon }: HackathonsSectionProp
 
           {/* Right Preview Banner Image */}
           <div className="lg:col-span-5 relative">
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
-              <img
+            <div className="relative h-72 md:h-80 rounded-2xl overflow-hidden border border-white/10 shadow-2xl group">
+              <Image
                 src={featured.coverImage}
                 alt={featured.title}
-                className="w-full h-72 md:h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+                fill
+                sizes="(max-width: 1024px) 100vw, 40vw"
+                unoptimized
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 p-4 rounded-xl bg-[#0d0d12]/90 backdrop-blur-md border border-white/10">

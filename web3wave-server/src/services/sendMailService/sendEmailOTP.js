@@ -8,7 +8,7 @@ export async function sendVerificationEmail({ to, name, otp, type = "verificatio
     const apiKey = BREVO_API_KEY;
     if (!apiKey) {
         logger.error("Brevo API key is not configured in environment variables (BREVO_API_KEY).");
-        throw new AppError("Email service is temporarily unavailable. Please configure BREVO_API_KEY.", 503);
+        throw new AppError("Email service is temporarily unavailable. Please try again later.", 503);
     }
 
     const recipientName = name || to.split("@")[0];
@@ -90,15 +90,15 @@ export async function sendVerificationEmail({ to, name, otp, type = "verificatio
             if (errMsg.includes("unrecognised IP address") || errMsg.includes("authorised_ips")) {
                 const ipMatch = errMsg.match(/(?:\d{1,3}\.){3}\d{1,3}|(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}/);
                 const ip = ipMatch ? ipMatch[0] : "";
-                logger.error(`Brevo IP Whitelist Error: ${errMsg}. Please authorize your IP at https://app.brevo.com/security/authorised_ips`);
+                logger.error(`Brevo IP Whitelist Error: ${errMsg}. Please authorize your IP (${ip}) at https://app.brevo.com/security/authorised_ips`);
                 throw new AppError(
-                    `Brevo email service requires IP authorization (${ip}). Please add your IP to https://app.brevo.com/security/authorised_ips`,
-                    502
+                    "Email service is temporarily unavailable. Please try again later.",
+                    503
                 );
             } else {
                 logger.error("Failed to send verification email via Brevo:", errorData);
             }
-            throw new AppError(`Failed to send verification email: ${errMsg}`, 502);
+            throw new AppError("Failed to send verification email. Please try again later.", 502);
         }
 
         logger.info(`Verification OTP (${type}) sent successfully to ${to}`);

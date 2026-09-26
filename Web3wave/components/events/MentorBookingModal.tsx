@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Calendar, Clock, CheckCircle2, UserCheck, MessageSquare, QrCode, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Mentor } from './MentorsSection'
@@ -59,9 +60,12 @@ export function MentorBookingModal({ mentor, onClose }: MentorBookingModalProps)
             <div className="space-y-6">
               {/* Header Profile */}
               <div className="flex items-center gap-4 pb-4 border-b border-white/10">
-                <img
+                <Image
                   src={mentor.avatar}
                   alt={mentor.name}
+                  width={56}
+                  height={56}
+                  unoptimized
                   className="w-14 h-14 rounded-2xl object-cover border-2 border-purple-500/40"
                 />
                 <div>

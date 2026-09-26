@@ -13,7 +13,14 @@ export const authenticateCompanyJWT = async (req, _res, next) => {
             throw new AppError("Access denied. No token provided.", 401);
         }
 
-        const isBlacklisted = await redisClient.get(`bl_${token}`);
+        let isBlacklisted = false;
+        try {
+            if (redisClient && redisClient.isOpen) {
+                isBlacklisted = await redisClient.get(`bl_${token}`);
+            }
+        } catch (redisErr) {
+            // Gracefully ignore Redis error
+        }
         if (isBlacklisted) {
             throw new AppError("Token has been logged out.", 401);
         }

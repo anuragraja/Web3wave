@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 export type BorderBeamSize = 'sm' | 'md' | 'lg' | 'line' | 'pulse-outside' | 'pulse-inner'
 export type BorderBeamTheme = 'dark' | 'light' | 'auto'
@@ -29,18 +29,28 @@ export const BorderBeam: React.FC<BorderBeamProps> = ({
   delay = 0,
   children,
 }) => {
+  const [isLowPower, setIsLowPower] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 768
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      setIsLowPower(isMobile || reducedMotion)
+    }
+  }, [])
+
   let from = colorFrom || '#f43f5e'
   let to = colorTo || '#06b6d4'
 
   if (colorVariant === 'colorful') {
-    from = '#f43f5e' // Rose
-    to = '#06b6d4'   // Cyan
+    from = '#f43f5e'
+    to = '#06b6d4'
   } else if (colorVariant === 'ocean') {
-    from = '#3b82f6' // Blue
-    to = '#8b5cf6'   // Purple
+    from = '#3b82f6'
+    to = '#8b5cf6'
   } else if (colorVariant === 'sunset') {
-    from = '#f59e0b' // Amber
-    to = '#ec4899'   // Pink
+    from = '#f59e0b'
+    to = '#ec4899'
   } else if (colorVariant === 'mono') {
     from = '#ffffff'
     to = '#52525b'
@@ -61,8 +71,11 @@ export const BorderBeam: React.FC<BorderBeamProps> = ({
       <div
         className="absolute top-1/2 left-1/2 w-[300%] h-[300%] aspect-square"
         style={{
-          background: `conic-gradient(from 0deg at 50% 50%, transparent 0%, ${from} 20%, ${to} 40%, transparent 60%)`,
-          animationName: 'border-beam-rotate',
+          background: isLowPower
+            ? `linear-gradient(135deg, ${from} 0%, ${to} 100%)`
+            : `conic-gradient(from 0deg at 50% 50%, transparent 0%, ${from} 20%, ${to} 40%, transparent 60%)`,
+          opacity: isLowPower ? 0.3 : 1,
+          animationName: isLowPower ? 'none' : 'border-beam-rotate',
           animationDuration: `${duration}s`,
           animationTimingFunction: 'linear',
           animationIterationCount: 'infinite',

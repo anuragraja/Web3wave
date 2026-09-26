@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   Wrench,
@@ -140,9 +141,12 @@ export function WorkshopsSection({ workshops = [], onReserveWorkshop }: Workshop
                 <div className="p-6 sm:p-8 space-y-6">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-2.5">
-                      <img
+                      <Image
                         src={workshop.instructorAvatar}
                         alt={workshop.instructor}
+                        width={32}
+                        height={32}
+                        unoptimized
                         className="w-8 h-8 rounded-full object-cover border border-rose-500/30 bg-[#121217] p-0.5"
                       />
                       <div className="text-xs">

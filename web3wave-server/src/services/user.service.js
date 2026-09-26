@@ -223,30 +223,59 @@ class UserService {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) throw new AppError("Invalid credentials", 401);
 
-        const cooldownKey = `login_otp_cooldown:${normalizedEmail}`;
-        const isCooldown = await this.cacheRepository.get(cooldownKey);
-        if (isCooldown) {
-            throw new AppError("A verification code was recently sent. Please wait before requesting another code.", 429);
+        const roleName = (typeof user.role === "object" ? user.role?.name : user.role) || "";
+        const isAdmin = roleName.toLowerCase() === ROLES.ADMIN.toLowerCase();
+
+        if (isAdmin) {
+            const cooldownKey = `login_otp_cooldown:${normalizedEmail}`;
+            const isCooldown = await this.cacheRepository.get(cooldownKey);
+            if (isCooldown) {
+                throw new AppError("A verification code was recently sent. Please wait before requesting another code.", 429);
+            }
+
+            const otp = crypto.randomInt(100000, 999999).toString();
+            const hashedOtp = this._hashValue(otp);
+
+            await this.cacheRepository.set(`login_otp:${normalizedEmail}`, hashedOtp, 300);
+            await this.cacheRepository.set(`login_otp_attempts:${normalizedEmail}`, 0, 300);
+            await this.cacheRepository.set(cooldownKey, "1", 60);
+
+            await sendVerificationEmail({
+                to: normalizedEmail,
+                name: user.name,
+                otp,
+                type: "login",
+            });
+
+            return {
+                requiresOtp: true,
+                email: normalizedEmail,
+                message: "A 6-digit verification code has been sent to your email.",
+            };
         }
 
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const hashedOtp = this._hashValue(otp);
+        const safeUser = this._getSafeUserPayload(user);
 
-        await this.cacheRepository.set(`login_otp:${normalizedEmail}`, hashedOtp, 300);
-        await this.cacheRepository.set(`login_otp_attempts:${normalizedEmail}`, 0, 300);
-        await this.cacheRepository.set(cooldownKey, "1", 60);
+        const jwtPayload = {
+            id: safeUser._id,
+            email: safeUser.email,
+            name: safeUser.name,
+            role: safeUser?.role?.name,
+            isVerified: safeUser?.isVerified,
+        };
 
-        await sendVerificationEmail({
-            to: normalizedEmail,
-            name: user.name,
-            otp,
-            type: "login",
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
+        const refreshToken = jwt.sign({ id: user._id }, REFRESH_SECRET, {
+            expiresIn: REFRESH_EXPIRES_IN,
         });
 
+        await this.saveRefreshToken(user._id, refreshToken);
+
         return {
-            requiresOtp: true,
-            email: normalizedEmail,
-            message: "A 6-digit verification code has been sent to your email.",
+            user: safeUser,
+            token,
+            refreshToken,
+            message: "Login successful!",
         };
     }
 

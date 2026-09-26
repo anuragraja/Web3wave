@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import Image from "next/image";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
@@ -14,10 +15,12 @@ const INJECTED_STYLES = `
   .gsap-reveal { visibility: visible; }
 
   /* Environment Overlays */
-  .film-grain {
-      position: absolute; inset: 0; width: 100%; height: 100%;
-      pointer-events: none; z-index: 50; opacity: 0.05; mix-blend-mode: overlay;
-      background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+  @media (min-width: 768px) {
+    .film-grain {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        pointer-events: none; z-index: 50; opacity: 0.05; mix-blend-mode: overlay;
+        background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+    }
   }
 
   .bg-grid-theme {
@@ -34,12 +37,20 @@ const INJECTED_STYLES = `
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 600px;
-      height: 300px;
+      width: 320px;
+      height: 200px;
       background: radial-gradient(ellipse at center, rgba(244, 63, 94, 0.18) 0%, rgba(168, 85, 247, 0.1) 40%, transparent 70%);
-      filter: blur(80px);
+      filter: blur(30px);
       pointer-events: none;
-      animation: wavePulse 6s ease-in-out infinite alternate;
+  }
+
+  @media (min-width: 768px) {
+    .wave-ambient-glow {
+        width: 600px;
+        height: 300px;
+        filter: blur(80px);
+        animation: wavePulse 6s ease-in-out infinite alternate;
+    }
   }
 
   @keyframes wavePulse {
@@ -494,7 +505,7 @@ export function CinematicHero({
                           <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">Onchain</span>
                         </div>
                         <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center p-1.5 border border-white/10 shadow-lg shadow-black/50">
-                          <img src="/web3wave-logo.png" alt="W3 Logo" className="w-full h-full object-contain" />
+                          <Image src="/web3wave-logo.png" alt="W3 Logo" width={24} height={24} className="w-full h-full object-contain" />
                         </div>
                       </div>
 

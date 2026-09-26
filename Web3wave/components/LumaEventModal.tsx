@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Calendar, MapPin, Clock, Users, CheckCircle2, QrCode, ArrowUpRight, AlertCircle, Loader2 } from 'lucide-react'
 import { LumaEvent } from './LumaEventGrid'
@@ -118,9 +119,12 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
             </h2>
 
             <div className="flex items-center gap-3 pb-6 border-b border-white/10 mb-6">
-              <img
+              <Image
                 src={event.hostAvatar}
                 alt={event.hostName}
+                width={36}
+                height={36}
+                unoptimized
                 className="w-9 h-9 rounded-full object-contain bg-[#181820] p-1 ring-2 ring-white/20"
               />
               <div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Check, Copy, UserCheck } from 'lucide-react'
@@ -124,7 +125,7 @@ export function BuilderPassGenerator() {
               {/* Card Header */}
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                 <div className="flex items-center gap-3">
-                  <img src="/web3wave-logo.png" alt="Web3Wave Logo" className="h-7 w-auto object-contain" />
+                  <Image src="/web3wave-logo.png" alt="Web3Wave Logo" width={28} height={28} className="h-7 w-auto object-contain" />
                   <div>
                     <div className="text-xs font-bold text-white leading-none">
                       WEB3WAVE

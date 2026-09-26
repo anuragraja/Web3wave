@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -407,9 +408,11 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
           {/* Header */}
           <div className="mb-5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center p-1.5 shrink-0">
-              <img
+              <Image
                 src="/web3wave-logo.png"
                 alt="Web3Wave Logo"
+                width={32}
+                height={32}
                 className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]"
               />
             </div>

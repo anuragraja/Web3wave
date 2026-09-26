@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Clock, ArrowUpRight, Gift, Coffee, Users, Laptop, Sparkles, CheckCircle2 } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam'
@@ -210,9 +211,12 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                   {/* Card Footer */}
                   <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <img
+                      <Image
                         src={evt.hostAvatar}
                         alt={evt.hostName}
+                        width={32}
+                        height={32}
+                        unoptimized
                         className="w-8 h-8 rounded-full object-contain bg-[#181820] p-0.5 ring-1 ring-white/20"
                       />
                       <div>
@@ -306,9 +310,12 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
 
                 <div className="px-5 pb-5 pt-3 border-t border-white/[0.06] flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <img
+                    <Image
                       src={evt.hostAvatar}
                       alt={evt.hostName}
+                      width={24}
+                      height={24}
+                      unoptimized
                       className="w-6 h-6 rounded-full object-cover ring-1 ring-white/20"
                     />
                     <span className="text-xs text-zinc-400 font-medium truncate max-w-[130px]">

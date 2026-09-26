@@ -1,6 +1,5 @@
-"use client";
-
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Sparkles, Code2, Users, Rocket, ArrowRight } from "lucide-react";
 import AboutSection1 from "@/components/ui/about-section-1";
 import { TeamSection, SocialLink } from "@/components/ui/team-section-1";
@@ -26,9 +25,9 @@ const LinkedinIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function AboutPage() {
   const mainSocialLinks: SocialLink[] = [
-    { icon: TwitterIcon, href: "https://x.com" },
-    { icon: GithubIcon, href: "https://github.com" },
-    { icon: LinkedinIcon, href: "https://linkedin.com" },
+    { type: "twitter", href: "https://x.com" },
+    { type: "github", href: "https://github.com" },
+    { type: "linkedin", href: "https://linkedin.com" },
   ];
 
   return (
@@ -45,12 +44,13 @@ export default function AboutPage() {
           </Link>
           <Link
             href="/"
-            onClick={() => window.scrollTo(0, 0)}
             className="flex items-center gap-2 group cursor-pointer min-w-0"
           >
-            <img
+            <Image
               src="/web3wave-logo.png"
               alt="Web3Wave Logo"
+              width={28}
+              height={28}
               className="h-6 sm:h-7 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.4)] group-hover:scale-105 transition-transform shrink-0"
             />
             <span className="text-xs sm:text-sm font-extrabold tracking-tight text-white group-hover:text-rose-300 transition-colors truncate">

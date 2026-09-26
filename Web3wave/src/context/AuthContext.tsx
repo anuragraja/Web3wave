@@ -66,31 +66,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [company, setCompany] = useState<CompanyUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Check auth status on mount from backend HTTP-only cookies
+  // Check auth status on mount from backend HTTP-only cookies concurrently
   const checkAuth = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await getMeApi();
-      if (res.success && res.data) {
-        setUser(res.data);
+      const [userResult, companyResult] = await Promise.allSettled([
+        getMeApi(),
+        getCompanyMeApi(),
+      ]);
+
+      if (userResult.status === "fulfilled" && userResult.value?.success && userResult.value?.data) {
+        setUser(userResult.value.data);
       } else {
         setUser(null);
       }
-    } catch {
-      setUser(null);
-    }
 
-    try {
-      const companyRes = await getCompanyMeApi();
-      if (companyRes.success && companyRes.data) {
-        setCompany(companyRes.data);
-        localStorage.setItem("web3wave_company_session", JSON.stringify(companyRes.data));
+      if (companyResult.status === "fulfilled" && companyResult.value?.success && companyResult.value?.data) {
+        setCompany(companyResult.value.data);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("web3wave_company_session", JSON.stringify(companyResult.value.data));
+        }
       } else {
-        const savedCompany = localStorage.getItem("web3wave_company_session");
-        if (savedCompany) {
-          try {
-            setCompany(JSON.parse(savedCompany));
-          } catch {
+        if (typeof window !== "undefined") {
+          const savedCompany = localStorage.getItem("web3wave_company_session");
+          if (savedCompany) {
+            try {
+              setCompany(JSON.parse(savedCompany));
+            } catch {
+              setCompany(null);
+            }
+          } else {
             setCompany(null);
           }
         } else {
@@ -98,16 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     } catch {
-      const savedCompany = localStorage.getItem("web3wave_company_session");
-      if (savedCompany) {
-        try {
-          setCompany(JSON.parse(savedCompany));
-        } catch {
-          setCompany(null);
-        }
-      } else {
-        setCompany(null);
-      }
+      setUser(null);
+      setCompany(null);
     } finally {
       setIsLoading(false);
     }
@@ -123,8 +120,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (data?.requiresOtp || res.requiresOtp) {
       return { requiresOtp: true, message: res.message || data?.message };
     }
-    const loggedInUser = data?.user;
+    const loggedInUser = data?.user || (res as any)?.user;
+    const token = data?.token || (res as any)?.token;
     if (loggedInUser) {
+      if (token && typeof window !== "undefined") {
+        localStorage.setItem("web3wave_token", token);
+      }
       setUser(loggedInUser);
       return { user: loggedInUser, message: res.message };
     }
@@ -133,8 +134,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyLoginOtp = async (email: string, otp: string): Promise<User> => {
     const res = await verifyLoginOtpApi({ email, otp });
-    const verifiedUser = res.data?.user;
+    const verifiedUser = res.data?.user || (res as any)?.user;
+    const token = res.data?.token || (res as any)?.token;
     if (verifiedUser) {
+      if (token && typeof window !== "undefined") {
+        localStorage.setItem("web3wave_token", token);
+      }
       setUser(verifiedUser);
       return verifiedUser;
     }
@@ -147,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerUser = async (data: RegisterUserRequest): Promise<{ user?: User; requiresOtp?: boolean; message?: string }> => {
     const res = await registerUserApi(data);
-    const registeredUser = res.data?.user;
+    const registeredUser = res.data?.user || (res as any)?.user;
     if (registeredUser || res.requiresOtp || res.data?.requiresOtp || res.success) {
       return {
         user: registeredUser,
@@ -160,8 +165,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const googleAuth = async (idToken: string): Promise<User> => {
     const res = await googleAuthApi({ idToken });
-    const loggedInUser = res.data?.user;
+    const loggedInUser = res.data?.user || (res as any)?.user;
+    const token = res.data?.token || (res as any)?.token;
     if (loggedInUser) {
+      if (token && typeof window !== "undefined") {
+        localStorage.setItem("web3wave_token", token);
+      }
       setUser(loggedInUser);
       return loggedInUser;
     }
@@ -170,7 +179,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyEmail = async (email: string, otp: string): Promise<User | undefined> => {
     const res = await verifyEmailApi({ email, otp });
-    const verifiedUser = res.data?.user;
+    const verifiedUser = res.data?.user || (res as any)?.user;
+    const token = res.data?.token || (res as any)?.token;
+    if (token && typeof window !== "undefined") {
+      localStorage.setItem("web3wave_token", token);
+    }
     if (verifiedUser) {
       setUser(verifiedUser);
       return verifiedUser;
@@ -192,6 +205,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("Logout request error", e);
     } finally {
       setUser(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("web3wave_token");
+      }
     }
   };
 
@@ -201,8 +217,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (data?.requiresOtp || res.requiresOtp) {
       return { requiresOtp: true, message: res.message || data?.message };
     }
-    const companyData = data?.company;
+    const companyData = data?.company || (res as any)?.company;
+    const token = data?.token || (res as any)?.token;
     if (companyData) {
+      if (token && typeof window !== "undefined") {
+        localStorage.setItem("web3wave_token", token);
+      }
       setCompany(companyData);
       localStorage.setItem("web3wave_company_session", JSON.stringify(companyData));
       return { company: companyData, message: res.message };
@@ -212,8 +232,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyCompanyLoginOtp = async (email: string, otp: string): Promise<CompanyUser> => {
     const res = await verifyCompanyLoginOtpApi({ email, otp });
-    const verifiedCompany = res.data?.company;
+    const verifiedCompany = res.data?.company || (res as any)?.company;
+    const token = res.data?.token || (res as any)?.token;
     if (verifiedCompany) {
+      if (token && typeof window !== "undefined") {
+        localStorage.setItem("web3wave_token", token);
+      }
       setCompany(verifiedCompany);
       localStorage.setItem("web3wave_company_session", JSON.stringify(verifiedCompany));
       return verifiedCompany;
@@ -227,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const registerCompany = async (data: RegisterCompanyRequest): Promise<{ company?: CompanyUser; requiresOtp?: boolean; message?: string }> => {
     const res = await registerCompanyApi(data);
-    const companyData = res.data?.company;
+    const companyData = res.data?.company || (res as any)?.company;
     if (companyData || res.requiresOtp || res.data?.requiresOtp || res.success) {
       return {
         company: companyData,
@@ -240,7 +264,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyCompanyEmail = async (email: string, otp: string): Promise<CompanyUser | undefined> => {
     const res = await verifyCompanyEmailApi({ email, otp });
-    const verifiedCompany = res.data?.company;
+    const verifiedCompany = res.data?.company || (res as any)?.company;
+    const token = res.data?.token || (res as any)?.token;
+    if (token && typeof window !== "undefined") {
+      localStorage.setItem("web3wave_token", token);
+    }
     if (verifiedCompany) {
       setCompany(verifiedCompany);
       localStorage.setItem("web3wave_company_session", JSON.stringify(verifiedCompany));
@@ -264,7 +292,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("Logout company error", e);
     } finally {
       setCompany(null);
-      localStorage.removeItem("web3wave_company_session");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("web3wave_company_session");
+        localStorage.removeItem("web3wave_token");
+      }
     }
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Image from "next/image";
 import { TimelineContent } from "@/components/ui/timeline-animation";
 import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -174,10 +175,12 @@ export default function AboutSection1() {
               className="absolute inset-0 w-full h-full overflow-hidden"
               style={{ clipPath: "url(#clip-squiggle)" }}
             >
-              <img
+              <Image
                 src="/gallery/gallery-1.jpg"
                 alt="Smart Cities Conclave Delegation"
-                className="w-full h-full object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
             </div>
@@ -208,10 +211,12 @@ export default function AboutSection1() {
               className="absolute inset-0 w-full h-full overflow-hidden"
               style={{ clipPath: "url(#differentone8)" }}
             >
-              <img
+              <Image
                 src="/gallery/gallery-4.jpg"
                 alt="Web3 Expo Showcase"
-                className="w-full h-full object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
             </div>
@@ -242,10 +247,12 @@ export default function AboutSection1() {
               className="absolute inset-0 w-full h-full overflow-hidden"
               style={{ clipPath: "url(#clip-rect)" }}
             >
-              <img
+              <Image
                 src="/gallery/gallery-5.jpg"
                 alt="IPS Academy Web3 Workshop"
-                className="w-full h-full object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="object-cover object-center scale-100 group-hover:scale-110 transition-transform duration-700 ease-out"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
             </div>

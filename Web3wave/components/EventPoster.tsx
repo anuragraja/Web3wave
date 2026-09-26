@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { Flame, Sparkles, Calendar, MapPin } from 'lucide-react'
 
+import Image from 'next/image'
+
 interface EventPosterProps {
   posterUrl?: string
   title: string
@@ -34,12 +36,14 @@ export function EventPoster({
 
   if (hasValidPoster) {
     return (
-      <img
-        src={posterUrl}
+      <Image
+        src={posterUrl!}
         alt={title}
+        fill
+        sizes="(max-width: 768px) 100vw, 33vw"
+        unoptimized
         onError={() => setImgError(true)}
         className={`object-cover ${className}`}
-        loading="eager"
       />
     )
   }
@@ -57,9 +61,11 @@ export function EventPoster({
       {/* Top Header Badge Row */}
       <div className="relative z-10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img
+          <Image
             src="/web3wave-logo.png"
             alt="Web3Wave Logo"
+            width={24}
+            height={24}
             className="h-6 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]"
           />
           <span className="text-xs font-black tracking-tight text-white font-mono">

@@ -2,6 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -264,9 +265,11 @@ export function HoverFooter({ onOpenSubscribe }: { onOpenSubscribe?: () => void 
               }}
               className="flex items-center space-x-2 group cursor-pointer"
             >
-              <img
+              <Image
                 src="/web3wave-logo.png"
                 alt="Web3Wave Logo"
+                width={32}
+                height={32}
                 className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(59,130,246,0.5)] group-hover:scale-105 transition-transform"
               />
               <span className="text-white text-2xl font-bold tracking-tight group-hover:text-rose-300 transition-colors">

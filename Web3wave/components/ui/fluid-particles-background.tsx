@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { getDevicePerformanceConfig } from "@/src/lib/performance";
 
 interface CyberBackgroundProps {
   children?: React.ReactNode;
@@ -11,7 +12,7 @@ interface CyberBackgroundProps {
   className?: string;
 }
 
-// Helper function for Perlin Noise
+// Perlin Noise generator
 function createNoise() {
   const permutation = [
     151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140,
@@ -96,21 +97,6 @@ function createNoise() {
   };
 }
 
-const COLOR_SCHEME = {
-  light: {
-    particle: {
-      color: "rgba(0, 0, 0, 0.07)",
-    },
-    background: "rgba(255, 255, 255, 0.12)",
-  },
-  dark: {
-    particle: {
-      color: "rgba(255, 255, 255, 0.15)",
-    },
-    background: "rgba(13, 13, 16, 0.12)",
-  },
-} as const;
-
 interface Particle {
   x: number;
   y: number;
@@ -122,7 +108,7 @@ interface Particle {
 
 export const FluidParticlesBackground = ({
   children,
-  particleCount = 600,
+  particleCount,
   noiseIntensity = 0.003,
   particleSize = { min: 0.8, max: 2.2 },
   className,
@@ -138,19 +124,18 @@ export const FluidParticlesBackground = ({
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    // Use IntersectionObserver to pause when offscreen
-    const observer = new IntersectionObserver(
-      (entries) => {
-        isVisibleRef.current = entries[0]?.isIntersecting ?? true;
-      },
-      { threshold: 0 }
-    );
-    observer.observe(canvas);
+    const config = getDevicePerformanceConfig();
+    if (config.reducedMotion) {
+      return;
+    }
 
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const effectiveParticleCount =
+      particleCount !== undefined ? Math.min(particleCount, config.particleCount) : config.particleCount;
+
+    let dpr = Math.min(window.devicePixelRatio || 1, config.maxDpr);
 
     const resizeCanvas = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, config.maxDpr);
       const parent = canvas.parentElement;
       const w = parent ? parent.clientWidth : window.innerWidth;
       const h = parent ? parent.clientHeight : window.innerHeight;
@@ -166,7 +151,7 @@ export const FluidParticlesBackground = ({
     const logicalWidth = () => canvas.width / dpr;
     const logicalHeight = () => canvas.height / dpr;
 
-    const particles: Particle[] = Array.from({ length: particleCount }, () => ({
+    const particles: Particle[] = Array.from({ length: effectiveParticleCount }, () => ({
       x: Math.random() * logicalWidth(),
       y: Math.random() * logicalHeight(),
       size:
@@ -177,111 +162,147 @@ export const FluidParticlesBackground = ({
       maxLife: 100 + Math.random() * 50,
     }));
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let lastFrameTime = performance.now();
+    const frameInterval = config.targetFps > 0 ? 1000 / config.targetFps : 1000 / 60;
     const TWO_PI = Math.PI * 2;
 
-    const animate = () => {
-      // Skip rendering entirely when offscreen — huge perf win
+    const animate = (now: number) => {
       if (!isVisibleRef.current) {
-        animationFrameId = requestAnimationFrame(animate);
+        animationFrameId = null;
         return;
       }
 
-      const w = logicalWidth();
-      const h = logicalHeight();
-      const scheme = COLOR_SCHEME.dark;
+      const elapsed = now - lastFrameTime;
+      if (elapsed >= frameInterval) {
+        lastFrameTime = now - (elapsed % frameInterval);
 
-      ctx.fillStyle = scheme.background;
-      ctx.fillRect(0, 0, w, h);
+        const w = logicalWidth();
+        const h = logicalHeight();
 
-      const noise = noiseRef.current;
-      // Cache time once per frame instead of per-particle
-      const time = performance.now() * 0.0001;
+        ctx.fillStyle = "rgba(13, 13, 16, 0.12)";
+        ctx.fillRect(0, 0, w, h);
 
-      // Batch particles by color to minimize fillStyle switches
-      // Group 1: rose particles (every 3rd)
-      // Group 2: white particles (rest)
-      const roseParticles: { x: number; y: number; size: number; opacity: number }[] = [];
-      const whiteParticles: { x: number; y: number; size: number; opacity: number }[] = [];
+        const noise = noiseRef.current;
+        const time = now * 0.0001;
 
-      for (let i = 0; i < particles.length; i++) {
-        const particle = particles[i];
-        particle.life += 1;
-        if (particle.life > particle.maxLife) {
-          particle.life = 0;
-          particle.x = Math.random() * w;
-          particle.y = Math.random() * h;
-        }
-
-        const opacity =
-          Math.sin((particle.life / particle.maxLife) * Math.PI) * 0.35;
-
-        const n = noise.simplex3(
-          particle.x * noiseIntensity,
-          particle.y * noiseIntensity,
-          time,
-        );
-
-        const angle = n * Math.PI * 4;
-        particle.velocity.x = Math.cos(angle) * 1.8;
-        particle.velocity.y = Math.sin(angle) * 1.8;
-
-        particle.x += particle.velocity.x;
-        particle.y += particle.velocity.y;
-
-        if (particle.x < 0) particle.x = w;
-        if (particle.x > w) particle.x = 0;
-        if (particle.y < 0) particle.y = h;
-        if (particle.y > h) particle.y = 0;
-
-        if (i % 3 === 0) {
-          roseParticles.push({ x: particle.x, y: particle.y, size: particle.size, opacity: opacity * 0.8 });
-        } else {
-          whiteParticles.push({ x: particle.x, y: particle.y, size: particle.size, opacity: opacity * 0.6 });
-        }
-      }
-
-      // Draw rose particles in fewer batches grouped by similar opacity
-      for (let i = 0; i < roseParticles.length; i++) {
-        const p = roseParticles[i];
-        ctx.fillStyle = `rgba(244, 63, 94, ${p.opacity})`;
+        // Batch particle drawing paths to minimize ctx.fill() state changes
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, TWO_PI);
+        ctx.fillStyle = "rgba(244, 63, 94, 0.25)";
+        for (let i = 0; i < particles.length; i += 3) {
+          const particle = particles[i];
+          particle.life += 1;
+          if (particle.life > particle.maxLife) {
+            particle.life = 0;
+            particle.x = Math.random() * w;
+            particle.y = Math.random() * h;
+          }
+
+          const n = noise.simplex3(
+            particle.x * noiseIntensity,
+            particle.y * noiseIntensity,
+            time,
+          );
+
+          const angle = n * Math.PI * 4;
+          particle.velocity.x = Math.cos(angle) * (config.isMobile ? 1.2 : 1.8);
+          particle.velocity.y = Math.sin(angle) * (config.isMobile ? 1.2 : 1.8);
+
+          particle.x += particle.velocity.x;
+          particle.y += particle.velocity.y;
+
+          if (particle.x < 0) particle.x = w;
+          if (particle.x > w) particle.x = 0;
+          if (particle.y < 0) particle.y = h;
+          if (particle.y > h) particle.y = 0;
+
+          ctx.moveTo(particle.x + particle.size, particle.y);
+          ctx.arc(particle.x, particle.y, particle.size, 0, TWO_PI);
+        }
         ctx.fill();
-      }
 
-      for (let i = 0; i < whiteParticles.length; i++) {
-        const p = whiteParticles[i];
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, TWO_PI);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+        for (let i = 1; i < particles.length; i += 3) {
+          const particle = particles[i];
+          particle.life += 1;
+          if (particle.life > particle.maxLife) {
+            particle.life = 0;
+            particle.x = Math.random() * w;
+            particle.y = Math.random() * h;
+          }
+
+          const n = noise.simplex3(
+            particle.x * noiseIntensity,
+            particle.y * noiseIntensity,
+            time,
+          );
+
+          const angle = n * Math.PI * 4;
+          particle.velocity.x = Math.cos(angle) * (config.isMobile ? 1.2 : 1.8);
+          particle.velocity.y = Math.sin(angle) * (config.isMobile ? 1.2 : 1.8);
+
+          particle.x += particle.velocity.x;
+          particle.y += particle.velocity.y;
+
+          if (particle.x < 0) particle.x = w;
+          if (particle.x > w) particle.x = 0;
+          if (particle.y < 0) particle.y = h;
+          if (particle.y > h) particle.y = 0;
+
+          ctx.moveTo(particle.x + particle.size, particle.y);
+          ctx.arc(particle.x, particle.y, particle.size, 0, TWO_PI);
+        }
         ctx.fill();
       }
 
       animationFrameId = requestAnimationFrame(animate);
     };
 
-    animate();
+    const startAnimation = () => {
+      if (!animationFrameId) {
+        lastFrameTime = performance.now();
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+
+    const stopAnimation = () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const isIntersecting = entries[0]?.isIntersecting ?? true;
+        isVisibleRef.current = isIntersecting;
+        if (isIntersecting) {
+          startAnimation();
+        } else {
+          stopAnimation();
+        }
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(canvas);
 
     const handleResize = () => {
       resizeCanvas();
     };
 
     window.addEventListener("resize", handleResize);
+
     return () => {
       window.removeEventListener("resize", handleResize);
-      cancelAnimationFrame(animationFrameId);
+      stopAnimation();
       observer.disconnect();
     };
   }, [particleCount, noiseIntensity, particleSize]);
 
   return (
-    <div
-      className={cn(
-        "relative w-full h-full overflow-hidden",
-        className,
-      )}
-    >
+    <div className={cn("relative w-full h-full overflow-hidden", className)}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
       <div className="relative z-10 w-full h-full flex items-center justify-center">
         {children}
