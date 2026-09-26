@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Clock, ArrowUpRight, CheckCircle2, X } from 'lucide-react'
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
 
 const eventsData = [
   {
@@ -43,6 +44,7 @@ const eventsData = [
 export function EventPasses() {
   const [selectedEvent, setSelectedEvent] = useState<typeof eventsData[0] | null>(null)
   const [registered, setRegistered] = useState(false)
+  useModalScrollLock(!!selectedEvent)
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,9 +128,15 @@ export function EventPasses() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setSelectedEvent(null)}
+            data-lenis-prevent="true"
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto overscroll-none"
           >
-            <div className="craft-card max-w-lg w-full p-8 bg-[#121215] relative">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              data-lenis-prevent="true"
+              className="craft-card max-w-lg w-full p-8 bg-[#121215] relative my-auto max-h-[85vh] overflow-y-auto overscroll-contain rounded-3xl"
+            >
               <button
                 onClick={() => setSelectedEvent(null)}
                 className="absolute top-4 right-4 text-zinc-400 hover:text-white"

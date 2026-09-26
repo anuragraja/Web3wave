@@ -5,12 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Trophy, Users, Code2, CheckCircle2, Coins, ArrowRight, ShieldCheck, QrCode, Cpu } from 'lucide-react'
 import { HackathonItem } from './HackathonsSection'
 
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
+
 interface HackathonRegisterModalProps {
   hackathon: HackathonItem | null
   onClose: () => void
 }
 
 export function HackathonRegisterModal({ hackathon, onClose }: HackathonRegisterModalProps) {
+  useModalScrollLock(!!hackathon)
   const [mode, setMode] = useState<'Team' | 'Solo'>('Team')
   const [teamName, setTeamName] = useState('')
   const [name, setName] = useState('')
@@ -35,14 +38,16 @@ export function HackathonRegisterModal({ hackathon, onClose }: HackathonRegister
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto"
+        data-lenis-prevent="true"
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto overscroll-none"
       >
         <motion.div
           initial={{ scale: 0.95, y: 15 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 15 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative max-w-xl w-full bg-[#10131e] border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(6,182,212,0.2)] my-8"
+          data-lenis-prevent="true"
+          className="relative max-w-xl w-full bg-[#10131e] border border-cyan-500/30 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(6,182,212,0.2)] my-auto max-h-[85vh] overflow-y-auto overscroll-contain"
         >
           {/* Close button */}
           <button

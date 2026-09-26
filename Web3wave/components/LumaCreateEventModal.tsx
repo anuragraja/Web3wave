@@ -1,21 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Calendar, MapPin, Clock, CheckCircle2, ArrowUpRight, Plus, Terminal, Users, Trophy, QrCode, Phone, AlertCircle } from 'lucide-react'
+import { X, Calendar, MapPin, Clock, CheckCircle2, ArrowUpRight, Plus, QrCode, AlertCircle, Loader2, Upload, Image as ImageIcon } from 'lucide-react'
 import { LumaEvent } from './LumaEventGrid'
+import { BackendEvent } from '@/src/api/events/types'
+import { createEventApi, updateEventApi } from '@/src/api/events'
+import { categoryToBackend, categoryToFrontend, mapBackendEventToLumaEvent } from '@/src/utils/eventUtils'
+import { EventPoster } from '@/components/EventPoster'
+
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
 
 interface LumaCreateEventModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddEvent: (event: LumaEvent) => void
+  onAddEvent?: (event: LumaEvent) => void
+  initialEvent?: BackendEvent | null
+  onSuccess?: () => void
 }
 
 export function LumaCreateEventModal({
   isOpen,
   onClose,
   onAddEvent,
+  initialEvent,
+  onSuccess,
 }: LumaCreateEventModalProps) {
+  useModalScrollLock(isOpen)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('Workshops')
   const [date, setDate] = useState('')
@@ -26,15 +37,51 @@ export function LumaCreateEventModal({
   const [hostPhone, setHostPhone] = useState('')
   const [capacity, setCapacity] = useState('60')
   const [description, setDescription] = useState('')
-  const [agenda, setAgenda] = useState('1. Keynote & Technical Deep Dive\n2. Live Code Sprint & Demo\n3. Q&A & Peer Networking')
+  const [status, setStatus] = useState('PUBLISHED')
+  const [poster, setPoster] = useState('')
   
   const [errorMsg, setErrorMsg] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdEvent, setCreatedEvent] = useState<LumaEvent | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [success, setSuccessState] = useState(false)
+
+  useEffect(() => {
+    if (initialEvent) {
+      setTitle(initialEvent.title || '')
+      setCategory(categoryToFrontend(initialEvent.category))
+      if (initialEvent.date) {
+        const d = new Date(initialEvent.date)
+        if (!isNaN(d.getTime())) {
+          setDate(d.toISOString().split('T')[0])
+        }
+      }
+      setTime(initialEvent.startTime || '')
+      setVenue(initialEvent.location || '')
+      setHostName(initialEvent.organizerName || '')
+      setHostEmail(initialEvent.organizerEmail || '')
+      setHostPhone(initialEvent.organizerPhone || '')
+      setCapacity(String(initialEvent.capacity || 60))
+      setDescription(initialEvent.description || '')
+      setStatus(initialEvent.status || 'PUBLISHED')
+      setPoster(initialEvent.poster || '')
+    } else {
+      setTitle('')
+      setCategory('Workshops')
+      setDate('')
+      setTime('')
+      setVenue('')
+      setHostName('')
+      setHostEmail('')
+      setHostPhone('')
+      setCapacity('60')
+      setDescription('')
+      setStatus('PUBLISHED')
+      setPoster('')
+    }
+  }, [initialEvent, isOpen])
 
   if (!isOpen) return null
 
-  // Ensure phone only accepts numbers (0-9) and caps at 10 digits
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value
     const numericOnly = rawVal.replace(/\D/g, '').slice(0, 10)
@@ -42,11 +89,26 @@ export function LumaCreateEventModal({
     if (errorMsg) setErrorMsg('')
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMsg('Image file size must be less than 5MB.')
+        return
+      }
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPoster(reader.result as string)
+        if (errorMsg) setErrorMsg('')
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
 
-    // Strict Field Validation
     if (!title.trim()) {
       setErrorMsg('Event / Workshop Title is required.')
       return
@@ -60,7 +122,7 @@ export function LumaCreateEventModal({
       return
     }
     if (!time.trim()) {
-      setErrorMsg('Time Slot is required (e.g. 05:00 PM - 08:00 PM IST).')
+      setErrorMsg('Time Slot is required (e.g. 12:30 PM Onwards).')
       return
     }
     if (!venue.trim()) {
@@ -75,55 +137,59 @@ export function LumaCreateEventModal({
       setErrorMsg('Please enter a valid Organizer Contact Email.')
       return
     }
-    if (!hostPhone || hostPhone.length !== 10) {
-      setErrorMsg('Organizer Contact Number is required and must contain exactly 10 digits.')
-      return
-    }
     if (!description.trim()) {
       setErrorMsg('Session Description is required.')
       return
     }
 
-    // Format date string nicely
-    const dateObj = new Date(date)
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-    
-    const dayName = days[dateObj.getDay()] || 'Saturday'
-    const monthName = months[dateObj.getMonth()] || 'NOV'
-    const dayNum = String(dateObj.getDate()).padStart(2, '0')
-    const formattedDateStr = `${dayName}, ${monthName} ${dayNum}, ${dateObj.getFullYear()}`
+    setIsSubmitting(true)
 
-    const newEvt: LumaEvent = {
-      id: `evt-${Date.now()}`,
-      title: title.trim(),
-      dateString: formattedDateStr,
-      dayNumber: dayNum,
-      monthName: monthName,
-      timeString: time.trim(),
-      venue: venue.trim(),
-      hostName: hostName.trim(),
-      hostAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-      coverImage: category === 'Workshops' 
-        ? 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1000&q=85'
-        : category === 'Hackathons'
-        ? 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1000&q=85'
-        : 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1000&q=85',
-      category: category,
-      attendeeCount: 1,
-      capacity: parseInt(capacity) || 50,
-      price: 'Free',
-      description: description.trim(),
-      agenda: agenda.split('\n').filter(Boolean),
+    try {
+      const payload = {
+        title: title.trim(),
+        category: categoryToBackend(category),
+        description: description.trim(),
+        capacity: parseInt(capacity) || 60,
+        date: new Date(date).toISOString(),
+        startTime: time.trim(),
+        location: venue.trim(),
+        organizerName: hostName.trim(),
+        organizerEmail: hostEmail.trim(),
+        organizerPhone: hostPhone.trim() || undefined,
+        poster: poster.trim() || undefined,
+        status: status || 'PUBLISHED',
+      }
+
+      let resBackendEvent: BackendEvent
+
+      if (initialEvent?._id) {
+        const res = await updateEventApi(initialEvent._id, payload)
+        resBackendEvent = res.data
+      } else {
+        const res = await createEventApi(payload)
+        resBackendEvent = res.data
+      }
+
+      const lumaEvt = mapBackendEventToLumaEvent(resBackendEvent)
+
+      if (onAddEvent) {
+        onAddEvent(lumaEvt)
+      }
+      if (onSuccess) {
+        onSuccess()
+      }
+
+      setCreatedEvent(lumaEvt)
+      setSuccessState(true)
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to save event to backend server.')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onAddEvent(newEvt)
-    setCreatedEvent(newEvt)
-    setSuccess(true)
   }
 
   const handleCloseAndReset = () => {
-    setSuccess(false)
+    setSuccessState(false)
     setCreatedEvent(null)
     setErrorMsg('')
     setTitle('')
@@ -134,6 +200,7 @@ export function LumaCreateEventModal({
     setHostEmail('')
     setHostPhone('')
     setDescription('')
+    setPoster('')
     onClose()
   }
 
@@ -144,14 +211,16 @@ export function LumaCreateEventModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={handleCloseAndReset}
-        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto"
+        data-lenis-prevent="true"
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto overscroll-none"
       >
         <motion.div
           initial={{ scale: 0.95, y: 15 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 15 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative max-w-lg w-full bg-[#121217] border border-rose-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(244,63,94,0.15)] my-8"
+          data-lenis-prevent="true"
+          className="relative max-w-lg w-full bg-[#121217] border border-rose-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_50px_rgba(244,63,94,0.15)] my-auto max-h-[85vh] overflow-y-auto overscroll-contain"
         >
           <button
             onClick={handleCloseAndReset}
@@ -168,11 +237,13 @@ export function LumaCreateEventModal({
 
               <div>
                 <span className="text-[10px] font-mono text-rose-400 uppercase tracking-widest">
-                  EVENT LIVE ON COMMUNITY CALENDAR
+                  {initialEvent ? 'EVENT UPDATED IN BACKEND' : 'EVENT LIVE ON COMMUNITY CALENDAR'}
                 </span>
-                <h3 className="text-2xl font-black text-white mt-1">Published Successfully!</h3>
+                <h3 className="text-2xl font-black text-white mt-1">
+                  {initialEvent ? 'Updated Successfully!' : 'Published Successfully!'}
+                </h3>
                 <p className="text-xs text-zinc-300 mt-1 max-w-sm mx-auto">
-                  Your <span className="text-rose-300 font-bold">{createdEvent.category}</span> session has been published and is now live on the event calendar.
+                  Your <span className="text-rose-300 font-bold">{createdEvent.category}</span> session has been saved to the MongoDB backend database.
                 </p>
               </div>
 
@@ -203,7 +274,7 @@ export function LumaCreateEventModal({
                 <div className="pt-3 border-t border-white/10 flex items-center justify-between">
                   <div className="text-[10px] text-rose-400 font-mono">
                     <span className="block font-bold">HOST: {createdEvent.hostName}</span>
-                    <span className="text-zinc-400">PHONE: +91 {hostPhone}</span>
+                    {hostPhone && <span className="text-zinc-400">PHONE: +91 {hostPhone}</span>}
                   </div>
                   <QrCode className="w-8 h-8 text-zinc-400" />
                 </div>
@@ -213,18 +284,18 @@ export function LumaCreateEventModal({
                 onClick={handleCloseAndReset}
                 className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-rose-500 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-xs font-extrabold text-white transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)]"
               >
-                View Live in Calendar
+                Close & Refresh View
               </button>
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-2 text-xs font-bold text-rose-400 mb-2">
                 <Plus className="w-4 h-4" />
-                <span>Host Event / Workshop</span>
+                <span>{initialEvent ? 'Edit Event' : 'Create Event (Admin)'}</span>
               </div>
 
               <h2 className="text-2xl font-black text-white tracking-tight mb-2">
-                Submit an Event or Workshop
+                {initialEvent ? 'Update Backend Event' : 'Create New Event'}
               </h2>
               <p className="text-xs text-zinc-400 mb-5">
                 All fields marked with <span className="text-rose-400 font-bold">*</span> are required.
@@ -253,10 +324,10 @@ export function LumaCreateEventModal({
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-zinc-300 mb-1">
-                      Event Category <span className="text-rose-400 font-bold">*</span>
+                      Category <span className="text-rose-400 font-bold">*</span>
                     </label>
                     <select
                       value={category}
@@ -272,7 +343,23 @@ export function LumaCreateEventModal({
 
                   <div>
                     <label className="block text-xs font-bold text-zinc-300 mb-1">
-                      Target Capacity <span className="text-rose-400 font-bold">*</span>
+                      Status <span className="text-rose-400 font-bold">*</span>
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
+                    >
+                      <option value="PUBLISHED">PUBLISHED</option>
+                      <option value="DRAFT">DRAFT</option>
+                      <option value="COMPLETED">COMPLETED</option>
+                      <option value="CANCELLED">CANCELLED</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-300 mb-1">
+                      Capacity <span className="text-rose-400 font-bold">*</span>
                     </label>
                     <input
                       required
@@ -283,6 +370,49 @@ export function LumaCreateEventModal({
                       placeholder="60"
                       className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
                     />
+                  </div>
+                </div>
+
+                {/* Poster Image Upload & Preview */}
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 mb-1">
+                    Event Poster / Cover Image (URL or Local Upload)
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={poster}
+                        onChange={(e) => setPoster(e.target.value)}
+                        placeholder="Paste image URL (https://...)"
+                        className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
+                      />
+                      <label className="cursor-pointer py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-rose-300 whitespace-nowrap flex items-center gap-1.5 transition-all">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload File</span>
+                        <input type="file" accept="image/*" onChange={handleImageFile} className="hidden" />
+                      </label>
+                    </div>
+
+                    {/* Image Live Preview */}
+                    {poster ? (
+                      <div className="relative rounded-xl overflow-hidden max-h-36 border border-white/10 bg-black/40 flex items-center justify-center group p-1">
+                        <img src={poster} alt="Poster Preview" className="max-h-32 w-auto object-contain rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => setPoster('')}
+                          className="absolute top-2 right-2 bg-black/80 hover:bg-rose-500 text-white p-1 rounded-full text-xs transition-colors shadow-md"
+                          title="Remove Poster"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-white/[0.02] border border-dashed border-white/10 text-[11px] text-zinc-500 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-zinc-600 shrink-0" />
+                        <span>No poster attached. Event will be published without a custom image.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -309,7 +439,7 @@ export function LumaCreateEventModal({
                       type="text"
                       value={time}
                       onChange={(e) => { setTime(e.target.value); if(errorMsg) setErrorMsg(''); }}
-                      placeholder="05:00 PM - 08:00 PM IST"
+                      placeholder="12:30 PM Onwards"
                       className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
                     />
                   </div>
@@ -317,28 +447,28 @@ export function LumaCreateEventModal({
 
                 <div>
                   <label className="block text-xs font-bold text-zinc-300 mb-1">
-                    Venue / Hybrid Location (Bhopal) <span className="text-rose-400 font-bold">*</span>
+                    Venue / Location <span className="text-rose-400 font-bold">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     value={venue}
                     onChange={(e) => { setVenue(e.target.value); if(errorMsg) setErrorMsg(''); }}
-                    placeholder="MANIT Tinkering Lab, The Nest Workspace, or Discord"
+                    placeholder="Nexians Academy, Transport Nagar, Near Bansal College, Bhopal"
                     className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-zinc-300 mb-1">
-                    Host / Organizer Name <span className="text-rose-400 font-bold">*</span>
+                    Organizer Name <span className="text-rose-400 font-bold">*</span>
                   </label>
                   <input
                     required
                     type="text"
                     value={hostName}
                     onChange={(e) => { setHostName(e.target.value); if(errorMsg) setErrorMsg(''); }}
-                    placeholder="MANIT Web3 Chapter / Builder"
+                    placeholder="Web3Wave by Nexians Academy"
                     className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500"
                   />
                 </div>
@@ -360,20 +490,18 @@ export function LumaCreateEventModal({
 
                   <div>
                     <label className="block text-xs font-bold text-zinc-300 mb-1">
-                      Mobile Number (Numbers Only) <span className="text-rose-400 font-bold">*</span>
+                      Mobile Number
                     </label>
                     <input
-                      required
                       type="tel"
                       inputMode="numeric"
                       pattern="[0-9]{10}"
                       maxLength={10}
                       value={hostPhone}
                       onChange={handlePhoneChange}
-                      placeholder="9876543210 (10 digits)"
+                      placeholder="9876543210"
                       className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
                     />
-                    <span className="text-[10px] text-zinc-500 block mt-0.5">Exactly 10 numeric digits</span>
                   </div>
                 </div>
 
@@ -393,10 +521,20 @@ export function LumaCreateEventModal({
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-xs font-extrabold text-white transition-all shadow-[0_0_25px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-xs font-extrabold text-white transition-all shadow-[0_0_25px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span>Publish Event to Calendar</span>
-                  <ArrowUpRight className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving to Backend Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{initialEvent ? 'Save Event Changes' : 'Publish Event to Backend'}</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </form>
             </div>

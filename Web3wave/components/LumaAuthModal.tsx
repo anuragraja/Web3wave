@@ -25,12 +25,15 @@ import {
 import { useAuth } from "@/src/context/AuthContext";
 import { openGoogleOAuthPopup } from "@/src/utils/googleOAuthPopup";
 
+import { useModalScrollLock } from "@/src/hooks/useModalScrollLock";
+
 interface LumaAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
+  useModalScrollLock(isOpen);
   const router = useRouter();
   const {
     loginUser,
@@ -77,30 +80,6 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isLoginOtp, setIsLoginOtp] = useState(false);
 
-  // Prevent background page scrolling & pause Lenis when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-      if (typeof window !== "undefined" && (window as any).__lenis) {
-        (window as any).__lenis.stop();
-      }
-    } else {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      if (typeof window !== "undefined" && (window as any).__lenis) {
-        (window as any).__lenis.start();
-      }
-    }
-    return () => {
-      document.body.style.overflow = "";
-      document.documentElement.style.overflow = "";
-      if (typeof window !== "undefined" && (window as any).__lenis) {
-        (window as any).__lenis.start();
-      }
-    };
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   // Password validation criteria checks
@@ -142,6 +121,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
       if (idToken) {
         await googleAuth(idToken);
         onClose();
+        router.push("/");
       }
     } catch (err: any) {
       if (popupWindow && !popupWindow.closed) {
@@ -221,6 +201,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
             setMode("verify_email");
           } else {
             onClose();
+            router.push("/");
           }
         } else {
           const res = await loginCompany({ email, password });
@@ -230,6 +211,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
             setMode("verify_email");
           } else {
             onClose();
+            router.push("/");
           }
         }
       } catch (err: any) {
@@ -269,6 +251,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
       }
       setTimeout(() => {
         onClose();
+        router.push("/");
       }, 600);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to verify OTP.");
@@ -522,7 +505,7 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
               </div>
 
               {/* Continue with Google OAuth Button */}
-              <button
+              {/* <button
                 type="button"
                 onClick={handleGoogleAuth}
                 disabled={isSubmitting}
@@ -551,13 +534,13 @@ export function LumaAuthModal({ isOpen, onClose }: LumaAuthModalProps) {
                   </svg>
                 )}
                 <span>Continue with Google</span>
-              </button>
+              </button> */}
 
-              <div className="flex items-center gap-3 mb-4">
+              {/* <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 h-px bg-white/10" />
                 <span className="text-[10px] font-mono text-zinc-500 uppercase">OR EMAIL</span>
                 <div className="flex-1 h-px bg-white/10" />
-              </div>
+              </div> */}
             </>
           )}
 

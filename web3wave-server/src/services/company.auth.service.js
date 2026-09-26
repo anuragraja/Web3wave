@@ -671,6 +671,20 @@ class CompanyAuthService {
         return { token, refreshToken: newRefreshToken };
     }
 
+    async getAllCompanies(page = 1, limit = 10, search = "") {
+        let filter = {};
+        if (search) {
+            filter = {
+                $or: [
+                    { companyName: { $regex: search, $options: "i" } },
+                    { email: { $regex: search, $options: "i" } },
+                    { phone: { $regex: search, $options: "i" } },
+                ],
+            };
+        }
+        return await this.companyRepository.findAllCompanies(filter, { page, limit });
+    }
+
     async logout(token) {
         if (!token) return true;
 

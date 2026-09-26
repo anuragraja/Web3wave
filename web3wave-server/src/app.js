@@ -4,8 +4,11 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.route.js";
 import companyAuthRoutes from "./routes/company.auth.route.js";
 import userRoutes from "./routes/user.route.js";
+import adminRoutes from "./routes/admin/index.js";
+import eventRoutes from "./routes/event.route.js";
 import { AppError } from "./utils/appError.js";
 import logger from "./utils/logger.js";
+import  {corsOptions} from "./config/corsOption.js";
 
 import config from "./config/environment.js";
 const {ALLOWED_ORIGINS} = config;
@@ -18,31 +21,13 @@ const allowedOrigins = rawOrigins
     .map((origin) => origin.trim().replace(/\/$/, ""))
     .filter(Boolean);
 
-app.use(
-    cors({
-        origin: (origin, callback) => {
-            if (!origin) return callback(null, true);
-            const normalizedOrigin = origin.replace(/\/$/, "");
-            if (
-                allowedOrigins.includes("*") ||
-                allowedOrigins.includes(normalizedOrigin) ||
-                (config.NODE_ENV !== "production" &&
-                    (normalizedOrigin.includes("localhost") || normalizedOrigin.includes("127.0.0.1")))
-            ) {
-                return callback(null, true);
-            }
-            return callback(new AppError(`Origin ${origin} not allowed by CORS`, 403));
-        },
-        credentials: true,
-    })
-);
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
 import healthRoutes from "./routes/health.route.js";
 import mongoose from "mongoose";
 
-// Public lightweight health check routes (Unprotected, zero DB/Redis overhead)
 app.use("/health", healthRoutes);
 app.use("/api/health", healthRoutes);
 
@@ -57,11 +42,16 @@ app.use("/api", (req, res, next) => {
     next();
 });
 
+import subscriberRoutes from "./routes/subscriber.route.js";
+
 app.use("/api/auth", authRoutes);
 app.use("/api/company/auth", companyAuthRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/subscribers", subscriberRoutes);
 
-// 404 Handler for undefined routes
+
 app.use((req, res, _next) => {
     res.status(404).json({
         success: false,

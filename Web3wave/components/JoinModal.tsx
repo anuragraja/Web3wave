@@ -4,12 +4,15 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ArrowUpRight, MessageSquare, Send, CheckCircle2 } from 'lucide-react'
 
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
+
 interface JoinModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
 export function JoinModal({ isOpen, onClose }: JoinModalProps) {
+  useModalScrollLock(isOpen)
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
@@ -30,13 +33,17 @@ export function JoinModal({ isOpen, onClose }: JoinModalProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={onClose}
+          data-lenis-prevent="true"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto overscroll-none"
         >
           <motion.div
             initial={{ scale: 0.95, y: 10 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 10 }}
-            className="craft-card max-w-lg w-full p-8 bg-[#121215] relative"
+            onClick={(e) => e.stopPropagation()}
+            data-lenis-prevent="true"
+            className="craft-card max-w-lg w-full p-8 bg-[#121215] relative my-auto max-h-[85vh] overflow-y-auto overscroll-contain rounded-3xl"
           >
             <button
               onClick={onClose}

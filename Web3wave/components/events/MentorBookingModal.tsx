@@ -5,12 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Calendar, Clock, CheckCircle2, UserCheck, MessageSquare, QrCode, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Mentor } from './MentorsSection'
 
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
+
 interface MentorBookingModalProps {
   mentor: Mentor | null
   onClose: () => void
 }
 
 export function MentorBookingModal({ mentor, onClose }: MentorBookingModalProps) {
+  useModalScrollLock(!!mentor)
   const [selectedSlot, setSelectedSlot] = useState('')
   const [topic, setTopic] = useState('Smart Contract Audit & Code Review')
   const [name, setName] = useState('')
@@ -33,14 +36,16 @@ export function MentorBookingModal({ mentor, onClose }: MentorBookingModalProps)
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto"
+        data-lenis-prevent="true"
+        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto overscroll-none"
       >
         <motion.div
           initial={{ scale: 0.95, y: 15 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 15 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative max-w-xl w-full bg-[#121217] border border-purple-500/30 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] my-8"
+          data-lenis-prevent="true"
+          className="relative max-w-xl w-full bg-[#121217] border border-purple-500/30 rounded-3xl p-6 md:p-8 shadow-[0_0_50px_rgba(168,85,247,0.2)] my-auto max-h-[85vh] overflow-y-auto overscroll-contain"
         >
           {/* Close button */}
           <button

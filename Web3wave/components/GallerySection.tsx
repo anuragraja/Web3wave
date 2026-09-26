@@ -37,11 +37,14 @@ const galleryImages = [
   },
 ]
 
+import { useModalScrollLock } from '@/src/hooks/useModalScrollLock'
+
 const categories = ['All', 'Conclave', 'Meetups', 'Workshops']
 
 export function GallerySection() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [selectedImage, setSelectedImage] = useState<typeof galleryImages[0] | null>(null)
+  useModalScrollLock(!!selectedImage)
 
   const filteredImages =
     activeCategory === 'All'
@@ -112,9 +115,10 @@ export function GallerySection() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+            data-lenis-prevent="true"
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer overflow-y-auto overscroll-none"
           >
-            <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-w-4xl w-full my-auto max-h-[85vh] overflow-y-auto overscroll-contain" data-lenis-prevent="true" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setSelectedImage(null)}
                 className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 text-white"

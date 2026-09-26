@@ -377,6 +377,100 @@ class MongoUserRepository extends IUserRepository {
             throw new AppError("Failed to fetch users", 500, error);
         }
     }
+
+    async getUserStats() {
+        try {
+            const [userStats] = await User.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        total: { $sum: 1 },
+                        verified: {
+                            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+                        },
+                        unverified: {
+                            $sum: { $cond: [{ $eq: ["$isVerified", true] }, 0, 1] },
+                        },
+                    },
+                },
+            ]);
+
+            const roleStats = await User.aggregate([
+                {
+                    $lookup: {
+                        from: "roles",
+                        localField: "roleId",
+                        foreignField: "_id",
+                        as: "role",
+                    },
+                },
+                {
+                    $unwind: {
+                        path: "$role",
+                        preserveNullAndEmptyArrays: true,
+                    },
+                },
+                {
+                    $group: {
+                        _id: { $toLower: "$role.name" },
+                        count: { $sum: 1 },
+                    },
+                },
+            ]);
+
+            let admins = 0;
+            let regularUsers = 0;
+
+            roleStats.forEach((stat) => {
+                if (stat._id === "admin") {
+                    admins = stat.count;
+                } else {
+                    regularUsers += stat.count;
+                }
+            });
+
+            const recentUsers = await User.aggregate([
+                { $sort: { createdAt: -1 } },
+                { $limit: 5 },
+                {
+                    $lookup: {
+                        from: "roles",
+                        localField: "roleId",
+                        foreignField: "_id",
+                        as: "role",
+                    },
+                },
+                {
+                    $unwind: {
+                        path: "$role",
+                        preserveNullAndEmptyArrays: true,
+                    },
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        name: 1,
+                        email: 1,
+                        isVerified: 1,
+                        createdAt: 1,
+                        role: "$role.name",
+                    },
+                },
+            ]);
+
+            return {
+                total: userStats?.total || 0,
+                verified: userStats?.verified || 0,
+                unverified: userStats?.unverified || 0,
+                admins,
+                regularUsers,
+                recentUsers,
+            };
+        } catch (error) {
+            console.error("Error computing user stats:", error);
+            throw new AppError("Failed to compute user statistics", 500, error);
+        }
+    }
 }
 
 export default MongoUserRepository;

@@ -2,8 +2,10 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Bell, Plus, MapPin, Users, Zap, Trophy, Rocket, Flame, ArrowRight } from 'lucide-react'
+import { Bell, Plus, MapPin, Users, Zap, Trophy, Rocket, Flame, ArrowRight, ShieldCheck } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam'
+import { useAuth } from '@/src/context/AuthContext'
+import { isUserAdmin } from '@/src/utils/eventUtils'
 
 interface LumaHeroProps {
   onOpenSubscribe: () => void
@@ -67,6 +69,9 @@ export function LumaHero({
   activeCategory,
   onSelectCategory,
 }: LumaHeroProps) {
+  const { user } = useAuth()
+  const isAdmin = isUserAdmin(user)
+
   return (
     <section className="relative pt-24 pb-12 overflow-hidden">
       {/* Background Ambient Glow */}
@@ -206,13 +211,16 @@ export function LumaHero({
                 <span>Subscribe Calendar</span>
               </button>
 
-              <button
-                onClick={onOpenCreateEvent}
-                className="btn-luma-secondary py-3 px-6 text-sm flex-1 lg:flex-initial justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Submit Local Event</span>
-              </button>
+              {/* Show Create Event ONLY if Admin */}
+              {isAdmin && (
+                <button
+                  onClick={onOpenCreateEvent}
+                  className="btn-luma-secondary py-3 px-6 text-sm flex-1 lg:flex-initial justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Submit Local Event (Admin)</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

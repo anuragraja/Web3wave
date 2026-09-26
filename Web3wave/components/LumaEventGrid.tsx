@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Calendar, MapPin, Clock, ArrowUpRight, Gift, Coffee, Users, Laptop, Sparkles, CheckCircle2 } from 'lucide-react'
 import { BorderBeam } from '@/components/ui/border-beam'
+import { EventPoster } from '@/components/EventPoster'
 
 export interface LumaEvent {
   id: string
@@ -26,41 +27,6 @@ export interface LumaEvent {
   highlights?: string[]
 }
 
-export const realWorkshopEvent: LumaEvent = {
-  id: 'workshop-blockchain-creative-web-dev',
-  title: 'Blockchain & Creative Web Development',
-  eventType: '1 Day Workshop',
-  dateString: '27 September 2026',
-  dayNumber: '27',
-  monthName: 'SEP',
-  timeString: '12:30 PM Onwards',
-  venue: 'Nexians Academy',
-  location: 'Transport Nagar, Near Bansal College, Bhopal',
-  hostName: 'Web3Wave by Nexians Academy',
-  hostAvatar: '/web3wave-logo.png',
-  coverImage: '/gallery/creatatievWebDev.png',
-  category: 'Workshops',
-  attendeeCount: 65,
-  capacity: 100,
-  price: 'Free',
-  description:
-    'A hands-on, beginner-friendly workshop to explore Web3 technologies and modern creative web development with industry experts.',
-  agenda: [
-    '12:30 PM — Check-in & Keynote: Welcome to Web3Wave & Nexians Academy',
-    '01:15 PM — Hands-on Creative Web Development, Visuals & Live Demos',
-    '02:45 PM — Blockchain Architecture & Smart Contract Engineering',
-    '04:00 PM — Networking, Free Refreshments & ₹10K Swag Distribution',
-  ],
-  highlights: [
-    'Upto ₹10K Free Goodies (Stickers, Swags & More)',
-    'Free Refreshments (Snacks & Beverages for all attendees)',
-    'Meet & Network (With like-minded builders, designers and Web3 enthusiasts)',
-    'Learn from Industry Experts (Hands-on Sessions & Live Demos)',
-  ],
-}
-
-export const sampleEvents: LumaEvent[] = [realWorkshopEvent]
-
 interface LumaEventGridProps {
   events: LumaEvent[]
   activeCategory: string
@@ -77,15 +43,15 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
     <section id="events" className="py-8 sm:py-12">
       <div className="shell">
         {filteredEvents.length === 0 ? (
-          <div className="text-center py-16 px-4 rounded-3xl bg-[#141418] border border-white/10 max-w-xl mx-auto">
-            <Sparkles className="w-8 h-8 text-rose-400 mx-auto mb-3" />
+          <div className="text-center py-16 px-4 rounded-3xl bg-[#141418] border border-white/10 max-w-xl mx-auto space-y-3">
+            <Sparkles className="w-8 h-8 text-rose-400 mx-auto" />
             <h3 className="text-lg font-bold text-white mb-1">No Events Found</h3>
             <p className="text-xs text-zinc-400">
-              There are no events under this category. Check out our upcoming workshop in &quot;Workshops&quot;.
+              There are currently no events listed under this category in the database. Check back soon for upcoming sessions!
             </p>
           </div>
         ) : filteredEvents.length === 1 ? (
-          /* Single Real Workshop Featured Card (Centered, Responsive Desktop & Mobile) */
+          /* Single Featured Event Card */
           <div className="max-w-4xl mx-auto">
             {filteredEvents.map((evt) => (
               <motion.div
@@ -99,13 +65,15 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
               >
                 <BorderBeam size="sm" duration={10} />
 
-                {/* Workshop Poster Container - Fully Responsive */}
+                {/* Event Poster Container with Branded Fallback */}
                 <div className="relative w-full overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
-                  <img
-                    src={evt.coverImage}
-                    alt="Blockchain & Creative Web Development Workshop"
-                    className="w-full h-auto max-h-[380px] sm:max-h-[440px] md:max-h-[480px] object-contain group-hover:scale-[1.01] transition-transform duration-500"
-                    loading="eager"
+                  <EventPoster
+                    posterUrl={evt.coverImage}
+                    title={evt.title}
+                    category={evt.category}
+                    venue={evt.venue}
+                    dateString={evt.dateString}
+                    className="w-full h-auto max-h-[380px] sm:max-h-[440px] md:max-h-[480px] group-hover:scale-[1.01] transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#121217] via-transparent to-transparent opacity-60 pointer-events-none" />
 
@@ -130,9 +98,8 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                   </div>
                 </div>
 
-                {/* Workshop Details Below The Poster */}
+                {/* Details Below Poster */}
                 <div className="p-6 sm:p-8 md:p-10 space-y-6">
-                  {/* Category & Title */}
                   <div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-rose-400 mb-2">
                       <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 font-mono text-[11px]">
@@ -149,7 +116,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                     </h3>
                   </div>
 
-                  {/* Meta Details Grid: Date/Time & Venue */}
+                  {/* Meta Details Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 text-xs text-zinc-300">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
@@ -176,7 +143,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                           {evt.venue}
                         </div>
                         <div className="text-zinc-200 text-xs sm:text-sm font-medium leading-relaxed mt-0.5">
-                          {evt.location || 'Transport Nagar, Near Bansal College, Bhopal'}
+                          {evt.location || 'Bhopal, MP'}
                         </div>
                       </div>
                     </div>
@@ -185,7 +152,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                   {/* Description */}
                   <div>
                     <h4 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                      WORKSHOP OVERVIEW
+                      SESSION OVERVIEW
                     </h4>
                     <p className="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
                       {evt.description}
@@ -195,7 +162,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                   {/* Highlights Grid */}
                   <div>
                     <h4 className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider mb-3">
-                      WORKSHOP HIGHLIGHTS
+                      EVENT HIGHLIGHTS
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/[0.02] border border-white/5">
@@ -224,7 +191,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                         </div>
                         <div>
                           <span className="text-xs font-bold text-white block">Meet & Network</span>
-                          <span className="text-[11px] text-zinc-400">With like-minded builders, designers & enthusiasts</span>
+                          <span className="text-[11px] text-zinc-400">With like-minded builders & Web3 enthusiasts</span>
                         </div>
                       </div>
 
@@ -240,7 +207,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                     </div>
                   </div>
 
-                  {/* Card Footer: Host & RSVP Button */}
+                  {/* Card Footer */}
                   <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <img
@@ -272,7 +239,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
             ))}
           </div>
         ) : (
-          /* Multi-card Grid Fallback (When New User Events are Added Dynamically) */
+          /* Multi-card Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((evt) => (
               <motion.div
@@ -282,17 +249,20 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                 viewport={{ once: true }}
                 transition={{ duration: 0.3 }}
                 onClick={() => onSelectEvent(evt)}
-                className="luma-card relative group cursor-pointer flex flex-col justify-between"
+                className="luma-card relative group cursor-pointer flex flex-col justify-between overflow-hidden"
               >
                 <BorderBeam size="sm" />
                 <div>
                   <div className="relative h-48 w-full overflow-hidden bg-zinc-900">
-                    <img
-                      src={evt.coverImage}
-                      alt={evt.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    <EventPoster
+                      posterUrl={evt.coverImage}
+                      title={evt.title}
+                      category={evt.category}
+                      venue={evt.venue}
+                      dateString={evt.dateString}
+                      className="w-full h-full group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#16161a] via-transparent to-transparent opacity-90" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#16161a] via-transparent to-transparent opacity-90 pointer-events-none" />
 
                     <div className="absolute top-3 left-3 bg-[#121216]/90 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
                       <span className="text-sm font-black text-white font-mono leading-none">

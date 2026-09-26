@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -17,11 +17,13 @@ import {
   Coins,
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  AlertCircle,
+  Loader2
 } from 'lucide-react'
 
 import { LumaNav } from '@/components/LumaNav'
-import { LumaEvent, sampleEvents } from '@/components/LumaEventGrid'
+import { LumaEventGrid, LumaEvent } from '@/components/LumaEventGrid'
 import dynamic from 'next/dynamic'
 
 const LumaEventModal = dynamic(() => import('@/components/LumaEventModal').then(mod => mod.LumaEventModal))
@@ -31,14 +33,23 @@ const LumaAuthModal = dynamic(() => import('@/components/LumaAuthModal').then(mo
 const HackathonRegisterModal = dynamic(() => import('@/components/events/HackathonRegisterModal').then(mod => mod.HackathonRegisterModal))
 import HoverFooter from '@/components/ui/hover-footer'
 
-import { HackathonsSection, sampleHackathons, HackathonItem } from '@/components/events/HackathonsSection'
-import { WorkshopsSection, sampleWorkshops, Workshop } from '@/components/events/WorkshopsSection'
+import { HackathonsSection, HackathonItem } from '@/components/events/HackathonsSection'
+import { WorkshopsSection, Workshop } from '@/components/events/WorkshopsSection'
+import { getPublicEventsApi } from '@/src/api/events'
+import { mapBackendEventToLumaEvent, isUserAdmin } from '@/src/utils/eventUtils'
+import { useAuth } from '@/src/context/AuthContext'
 
 type ActivePillarTab = 'all' | 'workshops'
 
 export default function EventsPage() {
+  const { user } = useAuth()
+  const isAdmin = isUserAdmin(user)
+
   const [activeTab, setActiveTab] = useState<ActivePillarTab>('all')
-  const [events, setEvents] = useState<LumaEvent[]>(sampleEvents)
+  const [events, setEvents] = useState<LumaEvent[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
   const [selectedEvent, setSelectedEvent] = useState<LumaEvent | null>(null)
   
   // Modals state
@@ -47,9 +58,53 @@ export default function EventsPage() {
   const [authOpen, setAuthOpen] = useState(false)
   const [selectedHackathon, setSelectedHackathon] = useState<HackathonItem | null>(null)
 
-  const handleAddEvent = (newEvent: LumaEvent) => {
-    setEvents([newEvent, ...events])
+  // Fetch Public Events directly from Backend API (No Dummy Fallback)
+  const fetchPublicEvents = useCallback(async () => {
+    setIsLoading(true)
+    setErrorMsg(null)
+    try {
+      const res = await getPublicEventsApi()
+      if (res.success && Array.isArray(res.data)) {
+        const mappedEvents = res.data.map(mapBackendEventToLumaEvent)
+        setEvents(mappedEvents)
+      } else {
+        setEvents([])
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch public events from backend:', err)
+      setErrorMsg('Unable to load events from backend server.')
+      setEvents([])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPublicEvents()
+  }, [fetchPublicEvents])
+
+  const handleAddEvent = () => {
+    fetchPublicEvents()
   }
+
+  // Derive Workshops from backend events
+  const workshopsData: Workshop[] = events
+    .filter(e => e.category === 'Workshops' || e.eventType?.toLowerCase().includes('workshop'))
+    .map(e => ({
+      id: e.id,
+      title: e.title,
+      instructor: e.hostName || 'Web3Wave Host',
+      instructorAvatar: e.hostAvatar || '/web3wave-logo.png',
+      dateString: e.dateString,
+      timeString: e.timeString,
+      venue: e.venue,
+      level: 'Beginner',
+      techStack: ['Learn', 'Build', 'Network', '1 Day Workshop'],
+      coverImage: e.coverImage,
+      description: e.description,
+      seatsLeft: e.capacity || 60,
+      capacity: e.capacity || 100,
+    }))
 
   return (
     <div className="min-h-screen bg-[#09090d] text-white selection:bg-rose-500 selection:text-white font-sans antialiased relative">
@@ -139,13 +194,16 @@ export default function EventsPage() {
 
           {/* Action CTAs */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <button
-              onClick={() => setCreateEventOpen(true)}
-              className="btn-luma-accent py-2.5 px-4 text-xs flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Host Event / Workshop</span>
-            </button>
+            {/* Show Host Event ONLY if Admin */}
+            {isAdmin && (
+              <button
+                onClick={() => setCreateEventOpen(true)}
+                className="btn-luma-accent py-2.5 px-4 text-xs flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Host Event / Workshop (Admin)</span>
+              </button>
+            )}
 
             <button
               onClick={() => setSubscribeOpen(true)}
@@ -157,21 +215,38 @@ export default function EventsPage() {
           </div>
         </div>
 
-        {/* Dynamic Render: Displays Only the Real Workshop */}
-        <div className="space-y-16">
-          <section id="workshops-pillar" className="space-y-6">
-            <WorkshopsSection
-              onReserveWorkshop={(ws) => {
-                const matched = events.find(e => e.title.toLowerCase().includes(ws.title.toLowerCase().substring(0, 10)))
-                if (matched) {
-                  setSelectedEvent(matched)
-                } else {
-                  setSelectedEvent(sampleEvents[0])
-                }
-              }}
-            />
-          </section>
-        </div>
+        {/* Dynamic Render: Displays Events or Workshops */}
+        {errorMsg ? (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold text-center flex items-center justify-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        ) : isLoading ? (
+          <div className="py-20 text-center text-zinc-400 flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+            <span className="text-xs font-mono">Loading Events from MongoDB...</span>
+          </div>
+        ) : activeTab === 'all' ? (
+          <LumaEventGrid
+            events={events}
+            activeCategory="All Events"
+            onSelectEvent={(evt) => setSelectedEvent(evt)}
+          />
+        ) : (
+          <div className="space-y-16">
+            <section id="workshops-pillar" className="space-y-6">
+              <WorkshopsSection
+                workshops={workshopsData}
+                onReserveWorkshop={(ws) => {
+                  const matched = events.find(e => e.id === ws.id)
+                  if (matched) {
+                    setSelectedEvent(matched)
+                  }
+                }}
+              />
+            </section>
+          </div>
+        )}
       </main>
 
       {/* Modals Integration */}
@@ -185,11 +260,14 @@ export default function EventsPage() {
         onClose={() => setSelectedEvent(null)}
       />
 
-      <LumaCreateEventModal
-        isOpen={createEventOpen}
-        onClose={() => setCreateEventOpen(false)}
-        onAddEvent={handleAddEvent}
-      />
+      {isAdmin && (
+        <LumaCreateEventModal
+          isOpen={createEventOpen}
+          onClose={() => setCreateEventOpen(false)}
+          onAddEvent={handleAddEvent}
+          onSuccess={fetchPublicEvents}
+        />
+      )}
 
       <LumaSubscribeModal
         isOpen={subscribeOpen}

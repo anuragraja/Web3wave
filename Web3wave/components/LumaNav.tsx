@@ -2,18 +2,25 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Bell, Menu, X, LogIn, User, LogOut } from 'lucide-react'
+import { Plus, Bell, Menu, X, LogIn, User, LogOut, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/src/context/AuthContext'
+import { isUserAdmin } from '@/src/utils/eventUtils'
 
 interface LumaNavProps {
-  onOpenSubscribe: () => void
-  onOpenCreateEvent: () => void
+  onOpenSubscribe?: () => void
+  onOpenCreateEvent?: () => void
   onOpenAuthModal?: () => void
+  isAdminNav?: boolean
 }
 
-export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }: LumaNavProps) {
+export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, isAdminNav }: LumaNavProps) {
   const { user, company, logoutUser, logoutCompany } = useAuth()
+  const isAdmin = isUserAdmin(user)
+  const pathname = usePathname()
+  const hideAdminItems = Boolean(isAdmin || isAdminNav || pathname === '/admin' || pathname?.startsWith('/admin'))
+
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -87,12 +94,17 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
             >
               Companies
             </a>
-            <a
-              href="/members"
-              className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
-            >
-              Members
-            </a>
+            
+            {/* Members button removed from Admin Navigation */}
+            {!hideAdminItems && (
+              <a
+                href="/members"
+                className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
+              >
+                Members
+              </a>
+            )}
+
             <a
               href="/gallery"
               className="text-xs font-semibold text-rose-300 hover:text-white px-3 py-1 rounded-full hover:bg-rose-500/20 transition-all flex items-center gap-1"
@@ -100,18 +112,40 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
               <span>Gallery</span>
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
             </a>
+
+            {/* Admin Dashboard Link (Only visible to Admin) */}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="text-xs font-bold text-amber-300 hover:text-white px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-all flex items-center gap-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>Admin</span>
+              </Link>
+            )}
           </nav>
 
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
+            {/* Show Create Event Button ONLY if Admin */}
+            {isAdmin && (
+              <button
+                onClick={() => onOpenCreateEvent?.()}
+                className="btn-luma-secondary text-xs py-2 px-3 border-rose-500/40 text-rose-300 hover:text-white transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create Event</span>
+              </button>
+            )}
+
             {user || company ? (
               <div className="flex items-center gap-2">
                 <Link
-                  href={company ? "/companies" : "/members"}
+                  href={company ? "/companies" : isAdmin ? "/admin" : "/members"}
                   className="btn-luma-secondary text-xs py-2 px-3 border-rose-500/30 bg-rose-500/10 text-rose-300 hover:text-white transition-all flex items-center gap-1.5"
                 >
                   <User className="w-3.5 h-3.5" />
-                  <span>{company ? company.companyName : user?.name || "Dashboard"}</span>
+                  <span>{company ? company.companyName : user?.name || "Account"}</span>
                 </Link>
                 <button
                   onClick={() => (company ? logoutCompany() : logoutUser())}
@@ -133,21 +167,16 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
               )
             )}
 
-            <button
-              onClick={onOpenCreateEvent}
-              className="btn-luma-secondary text-xs py-2 px-4"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Create Event</span>
-            </button>
-
-            <button
-              onClick={onOpenSubscribe}
-              className="btn-luma-accent text-xs py-2 px-4"
-            >
-              <Bell className="w-3.5 h-3.5" />
-              <span>Subscribe</span>
-            </button>
+            {/* Subscribe button removed from Admin Navigation */}
+            {!hideAdminItems && (
+              <button
+                onClick={onOpenSubscribe}
+                className="btn-luma-accent text-xs py-2 px-4"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>Subscribe</span>
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -170,7 +199,7 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
             exit={{ opacity: 0, y: -10 }}
             className="fixed inset-x-0 top-[60px] z-40 bg-[#0d0d10] border-b border-white/10 p-6 md:hidden flex flex-col gap-4"
           >
-            {onOpenAuthModal && (
+            {onOpenAuthModal && !(user || company) && (
               <button
                 onClick={() => {
                   setMobileMenuOpen(false)
@@ -182,6 +211,18 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
                 <span>Sign In / Login</span>
               </button>
             )}
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base font-bold text-amber-300 py-2 border-b border-white/5 flex items-center gap-2"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Admin Dashboard</span>
+              </Link>
+            )}
+
             <a
               href="/about"
               onClick={() => setMobileMenuOpen(false)}
@@ -203,13 +244,17 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
             >
               Companies Portal
             </a>
-            <a
-              href="/members"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-base font-bold text-white py-2 border-b border-white/5"
-            >
-              Members Portal
-            </a>
+            
+            {!hideAdminItems && (
+              <a
+                href="/members"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base font-bold text-white py-2 border-b border-white/5"
+              >
+                Members Portal
+              </a>
+            )}
+
             <a
               href="/gallery"
               onClick={() => setMobileMenuOpen(false)}
@@ -219,26 +264,30 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal }:
             </a>
 
             <div className="flex flex-col gap-2 pt-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  onOpenCreateEvent()
-                }}
-                className="btn-luma-secondary text-sm py-2.5 justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Event</span>
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  onOpenSubscribe()
-                }}
-                className="btn-luma-accent text-sm py-2.5 justify-center"
-              >
-                <Bell className="w-4 h-4" />
-                <span>Subscribe to Calendar</span>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    onOpenCreateEvent?.()
+                  }}
+                  className="btn-luma-secondary text-sm py-2.5 justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Event (Admin)</span>
+                </button>
+              )}
+              {!hideAdminItems && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    onOpenSubscribe?.()
+                  }}
+                  className="btn-luma-accent text-sm py-2.5 justify-center"
+                >
+                  <Bell className="w-4 h-4" />
+                  <span>Subscribe to Calendar</span>
+                </button>
+              )}
             </div>
           </motion.div>
         )}
