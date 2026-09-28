@@ -1,6 +1,8 @@
 import Joi from "joi";
 import { AppError } from "../../utils/appError.js";
 
+const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>])/;
+
 const registerCompanySchema = Joi.object({
     companyName: Joi.string().min(2).max(100).required().messages({
         "string.min": "Company name must be at least 2 characters long",
@@ -19,12 +21,21 @@ const registerCompanySchema = Joi.object({
         "string.min": "Phone number must be at least 7 characters long",
         "string.max": "Phone number cannot exceed 20 characters",
     }),
-    website: Joi.string().allow("", null),
-    role: Joi.string().allow("", null),
-    password: Joi.string().min(6).required().messages({
-        "string.min": "Password must be at least 6 characters long",
-        "any.required": "Password is required",
+    website: Joi.string().allow("", null).messages({
+        "string.uri": "Please enter a valid website URL",
     }),
+    designation: Joi.string().allow("", null),
+    role: Joi.string().allow("", null),
+    password: Joi.string()
+        .min(8)
+        .pattern(passwordComplexityRegex)
+        .required()
+        .messages({
+            "string.min": "Password must be at least 8 characters long",
+            "string.pattern.base":
+                "Password must contain uppercase, lowercase, and special character (!@#$%)",
+            "any.required": "Password is required",
+        }),
 }).or("phone", "number").messages({
     "object.missing": "Phone number is required",
 });
@@ -85,15 +96,26 @@ const confirmCompanyResetPasswordSchema = Joi.object({
     resetToken: Joi.string().required().messages({
         "any.required": "Reset authorization token is required",
     }),
-    newPassword: Joi.string().min(6).required().messages({
-        "string.min": "New password must be at least 6 characters long",
-        "any.required": "New password is required",
-    }),
+    newPassword: Joi.string()
+        .min(8)
+        .pattern(passwordComplexityRegex)
+        .required()
+        .messages({
+            "string.min": "New password must be at least 8 characters long",
+            "string.pattern.base":
+                "New password must contain uppercase, lowercase, and special character (!@#$%)",
+            "any.required": "New password is required",
+        }),
 });
 
 const validate = (schema) => (req, _res, next) => {
-    if (req.body && !req.body.phone && req.body.number) {
-        req.body.phone = req.body.number;
+    if (req.body) {
+        if (!req.body.phone && req.body.number) {
+            req.body.phone = req.body.number;
+        }
+        if (!req.body.designation && req.body.role) {
+            req.body.designation = req.body.role;
+        }
     }
     const { error, value } = schema.validate(req.body, {
         abortEarly: false,
@@ -108,6 +130,9 @@ const validate = (schema) => (req, _res, next) => {
     if (!req.body.phone && req.body.number) {
         req.body.phone = req.body.number;
     }
+    if (!req.body.designation && req.body.role) {
+        req.body.designation = req.body.role;
+    }
     next();
 };
 
@@ -120,4 +145,3 @@ export const verifyCompanyResetOtpValidator = validate(verifyCompanyResetOtpSche
 export const confirmCompanyResetPasswordValidator = validate(confirmCompanyResetPasswordSchema);
 export const verifyCompanyLoginOtpValidator = validate(verifyCompanyEmailSchema);
 export const resendCompanyLoginOtpValidator = validate(resendCompanyVerificationSchema);
-

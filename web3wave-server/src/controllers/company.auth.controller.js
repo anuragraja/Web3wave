@@ -111,6 +111,8 @@ export async function getMe(req, res, next) {
                 companyName: company.companyName,
                 email: company.email,
                 phone: company.phone,
+                website: company.website,
+                designation: company.designation,
                 role: "company",
                 isVerified: company.isVerified,
             },

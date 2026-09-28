@@ -93,12 +93,14 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, i
             >
               Events
             </Link>
-            {/* <Link
-              href="/companies"
-              className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
-            >
-              Companies
-            </Link> */}
+            {!hideAdminItems && (
+              <Link
+                href="/companies"
+                className="text-xs font-semibold text-zinc-300 hover:text-white px-3 py-1 rounded-full hover:bg-white/10 transition-all"
+              >
+                Companies
+              </Link>
+            )}
             
             {/* Members button removed from Admin Navigation */}
             {/* {!hideAdminItems && (
@@ -242,13 +244,15 @@ export function LumaNav({ onOpenSubscribe, onOpenCreateEvent, onOpenAuthModal, i
             >
               Explore Events
             </Link>
-            <Link
-              href="/companies"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-base font-bold text-white py-2 border-b border-white/5"
-            >
-              Companies Portal
-            </Link>
+            {!hideAdminItems && (
+              <Link
+                href="/companies"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-base font-bold text-white py-2 border-b border-white/5"
+              >
+                Companies Portal
+              </Link>
+            )}
             
             {!hideAdminItems && (
               <Link

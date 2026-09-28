@@ -158,7 +158,7 @@ export default function EventsPage() {
                 <span className="text-[11px] text-zinc-400 font-medium">Swags & Goodies</span>
               </div>
               <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                <span className="block text-2xl font-black text-cyan-400 font-mono">50+</span>
+                <span className="block text-2xl font-black text-cyan-400 font-mono">500+</span>
                 <span className="text-[11px] text-zinc-400 font-medium">Connected Builders</span>
               </div>
             </div>

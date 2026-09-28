@@ -140,6 +140,8 @@ class MongoCompanyRepository extends CompanyRepository {
                 "companyName",
                 "email",
                 "phone",
+                "website",
+                "designation",
                 "isVerified",
                 "resetPasswordToken",
                 "resetPasswordExpires",

@@ -22,6 +22,14 @@ const companySchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        website: {
+            type: String,
+            trim: true,
+        },
+        designation: {
+            type: String,
+            trim: true,
+        },
         password: {
             type: String,
             required: true, 

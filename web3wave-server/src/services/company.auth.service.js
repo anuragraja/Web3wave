@@ -126,7 +126,7 @@ class CompanyAuthService {
         return true;
     }
 
-    async register({ companyName, email, phone, password }) {
+    async register({ companyName, email, phone, number, website, designation, role, password }) {
         const normalizedEmail = email.toLowerCase().trim();
 
         await this._validateCompanyDomain(normalizedEmail);
@@ -141,10 +141,16 @@ class CompanyAuthService {
             );
         }
 
+        const contactPhone = (phone || number || "").trim();
+        const companyDesignation = (designation || role || "").trim();
+        const companyWebsite = (website || "").trim();
+
         const company = await this.companyRepository.createCompany({
             companyName: companyName.trim(),
             email: normalizedEmail,
-            phone: phone.trim(),
+            phone: contactPhone,
+            website: companyWebsite,
+            designation: companyDesignation,
             password,
             isVerified: false,
         });
@@ -255,6 +261,9 @@ class CompanyAuthService {
                 companyName: updatedCompany.companyName,
                 email: updatedCompany.email,
                 phone: updatedCompany.phone,
+                website: updatedCompany.website,
+                designation: updatedCompany.designation,
+                isVerified: true,
             },
             token,
             refreshToken,
@@ -304,84 +313,11 @@ class CompanyAuthService {
             throw new AppError("Invalid email or password.", 401);
         }
 
-        const cooldownKey = `company_login_otp_cooldown:${normalizedEmail}`;
-        const isCooldown = await this.cacheRepository.get(cooldownKey);
-        if (isCooldown) {
-            throw new AppError("A verification code was recently sent. Please wait before requesting another code.", 429);
-        }
-
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const hashedOtp = this._hashValue(otp);
-
-        await this.cacheRepository.set(
-            `company_login_otp:${normalizedEmail}`,
-            hashedOtp,
-            300
-        );
-        await this.cacheRepository.set(
-            `company_login_otp_attempts:${normalizedEmail}`,
-            0,
-            300
-        );
-        await this.cacheRepository.set(cooldownKey, "1", 60);
-
-        await sendVerificationEmail({
-            to: normalizedEmail,
-            name: company.companyName,
-            otp,
-            type: "login",
-        });
-
-        return {
-            requiresOtp: true,
-            email: normalizedEmail,
-            message: "A 6-digit verification code has been sent to your business email.",
-        };
-    }
-
-    async verifyLoginOtp({ email, otp }) {
-        if (!email || !otp) {
-            throw new AppError("Company email and OTP are required", 400);
-        }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        const inputOtp = otp.toString().trim();
-
-        const attemptsKey = `company_login_otp_attempts:${normalizedEmail}`;
-        const attempts = (await this.cacheRepository.get(attemptsKey)) || 0;
-        if (Number(attempts) >= 5) {
-            throw new AppError(
-                "Too many failed attempts. Please request a new verification code.",
-                429
-            );
-        }
-
-        const storedHashedOtp = await this.cacheRepository.get(
-            `company_login_otp:${normalizedEmail}`
-        );
-        if (!storedHashedOtp) {
-            throw new AppError("Verification code expired or invalid", 400);
-        }
-
-        const inputHashedOtp = this._hashValue(inputOtp);
-        if (inputHashedOtp !== storedHashedOtp) {
-            await this.cacheRepository.set(attemptsKey, Number(attempts) + 1, 300);
-            throw new AppError("Invalid verification code", 400);
-        }
-
-        const company =
-            await this.companyRepository.findCompanyByEmail(normalizedEmail);
-        if (!company) {
-            throw new AppError("Company account not found", 404);
-        }
-
-        await this.cacheRepository.del(`company_login_otp:${normalizedEmail}`);
-        await this.cacheRepository.del(attemptsKey);
-        await this.cacheRepository.del(`company_login_otp_cooldown:${normalizedEmail}`);
-
         if (!company.isVerified) {
-            await this.companyRepository.updateCompany(company._id, { isVerified: true });
-            company.isVerified = true;
+            throw new AppError(
+                "Company account is not verified. Please complete email verification before logging in.",
+                403
+            );
         }
 
         const jwtPayload = {
@@ -411,6 +347,51 @@ class CompanyAuthService {
                 companyName: company.companyName,
                 email: company.email,
                 phone: company.phone,
+                website: company.website,
+                designation: company.designation,
+                isVerified: company.isVerified,
+            },
+            token,
+            refreshToken,
+            message: "Company login successful!",
+        };
+    }
+
+    async verifyLoginOtp({ email, otp }) {
+        // Safe backward-compatibility fallback
+        if (!email || !otp) {
+            throw new AppError("Company email and OTP are required", 400);
+        }
+        const normalizedEmail = email.toLowerCase().trim();
+        const company = await this.companyRepository.findCompanyByEmail(normalizedEmail);
+        if (!company) {
+            throw new AppError("Company account not found", 404);
+        }
+        if (!company.isVerified) {
+            throw new AppError("Company account is not verified. Please complete registration email verification.", 403);
+        }
+        const jwtPayload = {
+            id: company._id,
+            email: company.email,
+            companyName: company.companyName,
+            role: "company",
+            isVerified: true,
+        };
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: "24h" });
+        const refreshToken = jwt.sign(
+            { id: company._id, type: "company" },
+            REFRESH_SECRET,
+            { expiresIn: REFRESH_EXPIRES_IN || "7d" }
+        );
+        return {
+            company: {
+                id: company._id,
+                companyName: company.companyName,
+                email: company.email,
+                phone: company.phone,
+                website: company.website,
+                designation: company.designation,
+                isVerified: true,
             },
             token,
             refreshToken,
@@ -419,45 +400,7 @@ class CompanyAuthService {
     }
 
     async resendLoginOtp({ email }) {
-        if (!email) throw new AppError("Company email is required", 400);
-
-        const normalizedEmail = email.toLowerCase().trim();
-        const company =
-            await this.companyRepository.findCompanyByEmail(normalizedEmail);
-
-        if (!company) {
-            return { message: "If an account exists, a new verification code has been sent." };
-        }
-
-        const cooldownKey = `company_login_otp_cooldown:${normalizedEmail}`;
-        const isCooldown = await this.cacheRepository.get(cooldownKey);
-        if (isCooldown) {
-            throw new AppError("Please wait before requesting another verification code", 429);
-        }
-
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const hashedOtp = this._hashValue(otp);
-
-        await this.cacheRepository.set(
-            `company_login_otp:${normalizedEmail}`,
-            hashedOtp,
-            300
-        );
-        await this.cacheRepository.set(
-            `company_login_otp_attempts:${normalizedEmail}`,
-            0,
-            300
-        );
-        await this.cacheRepository.set(cooldownKey, "1", 60);
-
-        await sendVerificationEmail({
-            to: normalizedEmail,
-            name: company.companyName,
-            otp,
-            type: "login",
-        });
-
-        return { message: "A new verification code has been sent to your business email." };
+        return { message: "Normal company login uses email and password only." };
     }
 
     async forgotPassword(email) {
@@ -581,6 +524,15 @@ class CompanyAuthService {
         }
 
         const normalizedEmail = email.toLowerCase().trim();
+
+        const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>])/;
+        if (newPassword.length < 8 || !passwordComplexityRegex.test(newPassword)) {
+            throw new AppError(
+                "Password must be at least 8 characters long and contain uppercase, lowercase, and special character (!@#$%)",
+                400
+            );
+        }
+
         const storedHashedToken = await this.cacheRepository.get(
             `company_reset_auth:${normalizedEmail}`
         );
@@ -679,6 +631,8 @@ class CompanyAuthService {
                     { companyName: { $regex: search, $options: "i" } },
                     { email: { $regex: search, $options: "i" } },
                     { phone: { $regex: search, $options: "i" } },
+                    { website: { $regex: search, $options: "i" } },
+                    { designation: { $regex: search, $options: "i" } },
                 ],
             };
         }
