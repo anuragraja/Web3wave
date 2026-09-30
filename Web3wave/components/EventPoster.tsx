@@ -44,7 +44,7 @@ export function EventPoster({
           sizes="(max-width: 768px) 100vw, 50vw"
           unoptimized
           onError={() => setImgError(true)}
-          className="object-contain w-full h-full"
+          className="object-cover w-full h-full"
         />
       </div>
     )
