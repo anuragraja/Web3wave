@@ -256,7 +256,7 @@ export function CinematicHero({
             </a>
 
             <a
-              href="#join"
+              href="https://discord.gg/sPHtRJPfQz"
               className="btn-modern-dark w-full sm:w-auto flex items-center justify-center gap-3 px-7 py-3.5 rounded-xl group focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 focus:ring-offset-background"
             >
               <svg className="w-5 h-5 text-white transition-transform group-hover:scale-105" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

@@ -13,6 +13,7 @@ export interface BackendEvent {
   organizerEmail: string;
   organizerPhone?: string;
   poster?: string;
+  registrationLink?: string;
   status: "DRAFT" | "PUBLISHED" | "CANCELLED" | "COMPLETED" | string;
   createdBy?: any;
   updatedBy?: any;
@@ -33,6 +34,7 @@ export interface CreateEventPayload {
   organizerEmail: string;
   organizerPhone?: string;
   poster?: string;
+  registrationLink?: string;
   status?: string;
 }
 
@@ -49,6 +51,7 @@ export interface UpdateEventPayload {
   organizerEmail?: string;
   organizerPhone?: string;
   poster?: string;
+  registrationLink?: string;
   status?: string;
 }
 

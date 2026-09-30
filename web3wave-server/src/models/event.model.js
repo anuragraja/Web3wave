@@ -71,6 +71,10 @@ const eventSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        registrationLink: {
+            type: String,
+            trim: true,
+        },
         status: {
             type: String,
             enum: Object.values(EVENT_STATUS),

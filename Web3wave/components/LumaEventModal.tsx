@@ -91,14 +91,14 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
           </button>
 
           {/* Banner Cover Image / Workshop Poster with Branded Fallback */}
-          <div className="relative w-full overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
+          <div className="relative w-full h-64 sm:h-80 md:h-[380px] overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
             <EventPoster
               posterUrl={event.coverImage}
               title={event.title}
               category={event.category}
               venue={event.venue}
               dateString={event.dateString}
-              className="w-full h-auto max-h-[360px] sm:max-h-[420px]"
+              className="w-full h-full"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#141418] via-transparent to-transparent opacity-60 pointer-events-none" />
 
@@ -174,9 +174,28 @@ export function LumaEventModal({ event, onClose }: LumaEventModalProps) {
               </div>
             )}
 
-            {/* Registration Form / Issued Ticket View */}
+            {/* Registration Form / External Link / Issued Ticket View */}
             <div className="p-6 rounded-2xl bg-[#181822] border border-white/10">
-              {ticketIssued ? (
+              {event.registrationLink && event.registrationLink.trim() ? (
+                <div className="text-center space-y-4 py-2">
+                  <h3 className="text-sm font-bold text-white flex items-center justify-between">
+                    <span>Reserve Your Builder Seat (Free)</span>
+                    <span className="text-xs font-normal text-rose-400 font-mono">Official Link</span>
+                  </h3>
+                  <p className="text-xs text-zinc-300">
+                    Registration for this event is hosted via an official registration form. Click below to open the link and reserve your seat.
+                  </p>
+                  <a
+                    href={event.registrationLink.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-rose-500 via-pink-600 to-purple-600 hover:from-rose-400 hover:to-purple-500 text-xs font-extrabold text-white transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
+                  >
+                    <span>Reserve Your Seat (Google Form / External Link)</span>
+                    <ArrowUpRight className="w-4 h-4" />
+                  </a>
+                </div>
+              ) : ticketIssued ? (
                 <div className="text-center space-y-4 py-2">
                   <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
                     <CheckCircle2 className="w-6 h-6" />

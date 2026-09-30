@@ -9,6 +9,7 @@ import { EventPoster } from '@/components/EventPoster'
 export interface LumaEvent {
   id: string
   title: string
+  registrationLink?: string
   eventType?: string
   dateString: string
   dayNumber: string
@@ -67,14 +68,14 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                 <BorderBeam size="sm" duration={10} />
 
                 {/* Event Poster Container with Branded Fallback */}
-                <div className="relative w-full overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
+                <div className="relative w-full h-64 sm:h-80 md:h-[420px] overflow-hidden bg-black/60 border-b border-white/10 flex items-center justify-center">
                   <EventPoster
                     posterUrl={evt.coverImage}
                     title={evt.title}
                     category={evt.category}
                     venue={evt.venue}
                     dateString={evt.dateString}
-                    className="w-full h-auto max-h-[380px] sm:max-h-[440px] md:max-h-[480px] group-hover:scale-[1.01] transition-transform duration-500"
+                    className="w-full h-full group-hover:scale-[1.01] transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#121217] via-transparent to-transparent opacity-60 pointer-events-none" />
 
@@ -171,7 +172,7 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                           <Gift className="w-4 h-4" />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-white block">Upto ₹10K Free Goodies</span>
+                          <span className="text-xs font-bold text-white block">Free Goodies</span>
                           <span className="text-[11px] text-zinc-400">Stickers, Swags & More</span>
                         </div>
                       </div>
@@ -229,7 +230,11 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        onSelectEvent(evt)
+                        if (evt.registrationLink && evt.registrationLink.trim()) {
+                          window.open(evt.registrationLink.trim(), '_blank', 'noopener,noreferrer')
+                        } else {
+                          onSelectEvent(evt)
+                        }
                       }}
                       className="btn-luma-primary py-3 px-6 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-rose-500/25 active:scale-95"
                     >
@@ -323,7 +328,16 @@ export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEve
                     </span>
                   </div>
 
-                  <button className="btn-luma-primary py-1.5 px-3.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      if (evt.registrationLink && evt.registrationLink.trim()) {
+                        e.stopPropagation()
+                        window.open(evt.registrationLink.trim(), '_blank', 'noopener,noreferrer')
+                      }
+                    }}
+                    className="btn-luma-primary py-1.5 px-3.5 text-xs"
+                  >
                     <span>Register</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>

@@ -40,6 +40,7 @@ export function LumaCreateEventModal({
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('PUBLISHED')
   const [poster, setPoster] = useState('')
+  const [registrationLink, setRegistrationLink] = useState('')
   
   const [errorMsg, setErrorMsg] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -65,6 +66,7 @@ export function LumaCreateEventModal({
       setDescription(initialEvent.description || '')
       setStatus(initialEvent.status || 'PUBLISHED')
       setPoster(initialEvent.poster || '')
+      setRegistrationLink(initialEvent.registrationLink || '')
     } else {
       setTitle('')
       setCategory('Workshops')
@@ -78,6 +80,7 @@ export function LumaCreateEventModal({
       setDescription('')
       setStatus('PUBLISHED')
       setPoster('')
+      setRegistrationLink('')
     }
   }, [initialEvent, isOpen])
 
@@ -158,6 +161,7 @@ export function LumaCreateEventModal({
         organizerEmail: hostEmail.trim(),
         organizerPhone: hostPhone.trim() || undefined,
         poster: poster.trim() || undefined,
+        registrationLink: registrationLink.trim() || undefined,
         status: status || 'PUBLISHED',
       }
 
@@ -202,6 +206,7 @@ export function LumaCreateEventModal({
     setHostPhone('')
     setDescription('')
     setPoster('')
+    setRegistrationLink('')
     onClose()
   }
 
@@ -504,6 +509,22 @@ export function LumaCreateEventModal({
                       className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 mb-1">
+                    Registration Link / External Google Form URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={registrationLink}
+                    onChange={(e) => setRegistrationLink(e.target.value)}
+                    placeholder="https://forms.google.com/..."
+                    className="w-full bg-[#181822] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-rose-500 font-mono"
+                  />
+                  <span className="text-[10px] text-zinc-500 block mt-1">
+                    If provided, clicking "Reserve Your Seat" will open this link directly.
+                  </span>
                 </div>
 
                 <div>

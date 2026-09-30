@@ -36,15 +36,17 @@ export function EventPoster({
 
   if (hasValidPoster) {
     return (
-      <Image
-        src={posterUrl!}
-        alt={title}
-        fill
-        sizes="(max-width: 768px) 100vw, 33vw"
-        unoptimized
-        onError={() => setImgError(true)}
-        className={`object-cover ${className}`}
-      />
+      <div className={`relative w-full h-full min-h-[240px] overflow-hidden flex items-center justify-center bg-black/80 ${className}`}>
+        <Image
+          src={posterUrl!}
+          alt={title}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          unoptimized
+          onError={() => setImgError(true)}
+          className="object-contain w-full h-full"
+        />
+      </div>
     )
   }
 

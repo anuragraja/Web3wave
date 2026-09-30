@@ -113,14 +113,14 @@ export function WorkshopsSection({ workshops = [], onReserveWorkshop }: Workshop
               <BorderBeam size="md" colorVariant="colorful" />
               <div>
                 {/* Cover Image / Poster with Branded Fallback */}
-                <div className="relative w-full overflow-hidden bg-black/60 flex items-center justify-center border-b border-white/10">
+                <div className="relative w-full h-64 sm:h-80 md:h-[420px] overflow-hidden bg-black/60 flex items-center justify-center border-b border-white/10">
                   <EventPoster
                     posterUrl={workshop.coverImage}
                     title={workshop.title}
                     category="Workshops"
                     venue={workshop.venue}
                     dateString={workshop.dateString}
-                    className="w-full h-auto max-h-[460px] group-hover:scale-[1.01] transition-transform duration-500"
+                    className="w-full h-full group-hover:scale-[1.01] transition-transform duration-500"
                   />
 
                   <div className="absolute top-4 left-4 flex items-center gap-2">

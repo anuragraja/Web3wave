@@ -42,6 +42,7 @@ export function mapBackendEventToLumaEvent(evt: BackendEvent): LumaEvent {
   return {
     id: evt._id,
     title: evt.title,
+    registrationLink: evt.registrationLink || "",
     eventType: catDisplay === "Workshops" ? "1 Day Workshop" : catDisplay,
     dateString,
     dayNumber: dayNum,
@@ -63,7 +64,7 @@ export function mapBackendEventToLumaEvent(evt: BackendEvent): LumaEvent {
       "Networking & Community Swag Distribution",
     ],
     highlights: [
-      "Upto ₹10K Free Goodies (Stickers, Swags & More)",
+      "Free Goodies (Stickers, Swags & More)",
       "Free Refreshments (Snacks & Beverages for all attendees)",
       "Meet & Network with like-minded builders",
       "Learn from Industry Experts",

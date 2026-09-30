@@ -5,14 +5,23 @@ import { EVENT_CATEGORIES, EVENT_STATUS } from "../../constants/events.js";
 const categoryValues = Object.values(EVENT_CATEGORIES);
 const statusValues = Object.values(EVENT_STATUS);
 
+const categoryNormalizer = (value, helpers) => {
+    if (!value || typeof value !== "string") return helpers.error("any.required");
+    const norm = value.trim().toUpperCase();
+    if (norm === "WORKSHOPS" || norm === "WORKSHOP") return "WORKSHOP";
+    if (norm === "HACKATHONS" || norm === "HACKATHON") return "HACKATHON";
+    if (norm === "MEETUPS" || norm === "MEETUP") return "MEETUP";
+    if (norm === "GRANT SPRINTS" || norm === "GRANT SPRINT" || norm === "GRANT_SPRINT") return "GRANT_SPRINT";
+    return helpers.error("any.only");
+};
+
 const createEventSchema = Joi.object({
     title: Joi.string().trim().required().messages({
         "any.required": "Event title is required",
         "string.empty": "Event title cannot be empty",
     }),
     category: Joi.string()
-        .uppercase()
-        .valid(...categoryValues)
+        .custom(categoryNormalizer)
         .required()
         .messages({
             "any.required": "Event category is required",
@@ -26,9 +35,9 @@ const createEventSchema = Joi.object({
         "any.required": "Event capacity is required",
         "number.min": "Capacity must be at least 1",
     }),
-    date: Joi.date().iso().required().messages({
+    date: Joi.date().required().messages({
         "any.required": "Event date is required",
-        "date.format": "Date must be a valid ISO 8601 date string",
+        "date.base": "Date must be a valid date",
     }),
     startTime: Joi.string().trim().required().messages({
         "any.required": "Start time is required",
@@ -40,12 +49,13 @@ const createEventSchema = Joi.object({
     organizerName: Joi.string().trim().required().messages({
         "any.required": "Organizer name is required",
     }),
-    organizerEmail: Joi.string().email().required().messages({
+    organizerEmail: Joi.string().trim().email().required().messages({
         "any.required": "Organizer email is required",
         "string.email": "Organizer email must be a valid email address",
     }),
     organizerPhone: Joi.string().trim().allow("", null),
     poster: Joi.string().trim().allow("", null),
+    registrationLink: Joi.string().trim().allow("", null),
     status: Joi.string()
         .uppercase()
         .valid(...statusValues)
@@ -57,17 +67,18 @@ const createEventSchema = Joi.object({
 
 const updateEventSchema = Joi.object({
     title: Joi.string().trim(),
-    category: Joi.string().uppercase().valid(...categoryValues),
+    category: Joi.string().custom(categoryNormalizer),
     description: Joi.string().trim(),
     capacity: Joi.number().integer().min(1),
-    date: Joi.date().iso(),
+    date: Joi.date(),
     startTime: Joi.string().trim(),
     endTime: Joi.string().trim().allow("", null),
     location: Joi.string().trim(),
     organizerName: Joi.string().trim(),
-    organizerEmail: Joi.string().email(),
+    organizerEmail: Joi.string().trim().email(),
     organizerPhone: Joi.string().trim().allow("", null),
     poster: Joi.string().trim().allow("", null),
+    registrationLink: Joi.string().trim().allow("", null),
     status: Joi.string().uppercase().valid(...statusValues),
 }).min(1);
 

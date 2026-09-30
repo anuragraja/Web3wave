@@ -55,7 +55,12 @@ class EventService {
             throw new AppError("Created by user ID is required", 400);
         }
 
-        const category = eventData.category ? eventData.category.toUpperCase() : null;
+        let category = eventData.category ? eventData.category.trim().toUpperCase() : null;
+        if (category === "WORKSHOPS") category = "WORKSHOP";
+        if (category === "HACKATHONS") category = "HACKATHON";
+        if (category === "MEETUPS") category = "MEETUP";
+        if (category === "GRANT SPRINTS" || category === "GRANT SPRINT") category = "GRANT_SPRINT";
+
         if (!category || !Object.values(EVENT_CATEGORIES).includes(category)) {
             throw new AppError(
                 `Invalid category. Must be one of: ${Object.values(EVENT_CATEGORIES).join(", ")}`,
@@ -156,7 +161,12 @@ class EventService {
         const payload = { ...updateData };
 
         if (payload.category) {
-            const category = payload.category.toUpperCase();
+            let category = payload.category.trim().toUpperCase();
+            if (category === "WORKSHOPS") category = "WORKSHOP";
+            if (category === "HACKATHONS") category = "HACKATHON";
+            if (category === "MEETUPS") category = "MEETUP";
+            if (category === "GRANT SPRINTS" || category === "GRANT SPRINT") category = "GRANT_SPRINT";
+
             if (!Object.values(EVENT_CATEGORIES).includes(category)) {
                 throw new AppError(
                     `Invalid category. Must be one of: ${Object.values(EVENT_CATEGORIES).join(", ")}`,
