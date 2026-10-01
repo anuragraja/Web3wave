@@ -65,7 +65,9 @@ export default function EventsPage() {
     try {
       const res = await getPublicEventsApi()
       if (res.success && Array.isArray(res.data)) {
-        const mappedEvents = res.data.map(mapBackendEventToLumaEvent)
+        const mappedEvents = res.data
+          .map(mapBackendEventToLumaEvent)
+          .filter((e) => !e.status || e.status === 'PUBLISHED')
         setEvents(mappedEvents)
       } else {
         setEvents([])

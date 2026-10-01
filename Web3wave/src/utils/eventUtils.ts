@@ -58,6 +58,7 @@ export function mapBackendEventToLumaEvent(evt: BackendEvent): LumaEvent {
     capacity: evt.capacity || 100,
     price: "Free",
     description: evt.description,
+    status: evt.status || "PUBLISHED",
     agenda: [
       `${evt.startTime} — ${evt.title} Welcome & Keynote`,
       "Hands-on Developer Sessions & Demos",

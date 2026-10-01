@@ -27,6 +27,7 @@ export interface LumaEvent {
   description: string
   agenda: string[]
   highlights?: string[]
+  status?: string
 }
 
 interface LumaEventGridProps {
@@ -36,10 +37,11 @@ interface LumaEventGridProps {
 }
 
 export function LumaEventGrid({ events, activeCategory, onSelectEvent }: LumaEventGridProps) {
+  const publicEvents = events.filter((e) => !e.status || e.status === 'PUBLISHED')
   const filteredEvents =
     activeCategory === 'All Events' || activeCategory === 'Workshops'
-      ? events
-      : events.filter((e) => e.category === activeCategory)
+      ? publicEvents
+      : publicEvents.filter((e) => e.category === activeCategory)
 
   return (
     <section id="events" className="py-8 sm:py-12">

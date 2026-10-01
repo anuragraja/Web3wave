@@ -3,7 +3,7 @@ import { getPublicEventsApi } from '@/src/api/events'
 import { mapBackendEventToLumaEvent } from '@/src/utils/eventUtils'
 import { LumaEvent } from '@/components/LumaEventGrid'
 
-export const revalidate = 60 // Server-side revalidation every 60 seconds
+export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   let initialEvents: LumaEvent[] = []
@@ -11,7 +11,9 @@ export default async function Home() {
   try {
     const res = await getPublicEventsApi()
     if (res.success && Array.isArray(res.data)) {
-      initialEvents = res.data.map(mapBackendEventToLumaEvent)
+      initialEvents = res.data
+        .map(mapBackendEventToLumaEvent)
+        .filter((e) => !e.status || e.status === 'PUBLISHED')
     }
   } catch {
     initialEvents = []

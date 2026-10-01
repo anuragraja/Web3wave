@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { LumaHero } from '@/components/LumaHero'
 import { LumaEventGrid, LumaEvent } from '@/components/LumaEventGrid'
@@ -80,7 +80,9 @@ export function HomePageClient({ initialEvents }: HomePageClientProps) {
     try {
       const res = await getPublicEventsApi()
       if (res.success && Array.isArray(res.data)) {
-        const mappedEvents = res.data.map(mapBackendEventToLumaEvent)
+        const mappedEvents = res.data
+          .map(mapBackendEventToLumaEvent)
+          .filter(e => !e.status || e.status === 'PUBLISHED')
         setEvents(mappedEvents)
       } else {
         setEvents([])
@@ -92,6 +94,10 @@ export function HomePageClient({ initialEvents }: HomePageClientProps) {
       setIsLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    fetchPublicEvents()
+  }, [fetchPublicEvents])
 
   const handleAddEvent = () => {
     fetchPublicEvents()
